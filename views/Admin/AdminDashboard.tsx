@@ -336,8 +336,8 @@ const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 min-h-[calc(100vh-160px)] pb-20">
-      <aside className="w-full lg:w-64 shrink-0">
+    <div className="flex flex-row min-h-[calc(100vh-160px)] pb-20">
+      <aside className="w-64 shrink-0 border-r border-slate-100 pr-8">
         <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm sticky top-24 space-y-1">
           {navItems.map((item) => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${activeTab === item.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}>{item.icon}<span>{item.label}</span></button>
@@ -345,7 +345,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       </aside>
 
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 pl-8 space-y-6">
         {activeTab === '统计看板' && renderDashboard()}
         {activeTab === '标准 SOP 库' && (
           <div className="space-y-6 animate-in fade-in duration-500">
