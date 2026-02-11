@@ -1,0 +1,8 @@
+{
+  "name": "维修SOP系统",
+  "description": "专业化的维修指南平台，包含工程师移动端步骤化引导与全面的后台管理系统，用于设备、指南及人员管理。",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
