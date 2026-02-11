@@ -54,7 +54,7 @@ const App: React.FC = () => {
                   onClick={() => setViewMode('APP')}
                   className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${viewMode === 'APP' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
                 >
-                  工程师端
+                  PDA端
                 </button>
                 <button 
                   onClick={() => setViewMode('ADMIN')}

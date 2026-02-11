@@ -4,7 +4,7 @@
 
 ## 核心功能需求实现
 
-### 1. 工程师端 (Mobile-First Experience)
+### 1. PDA端 (Mobile-First Experience)
 - **实时报修管理**：
   - 查看待处理报修列表。
   - **详细报修看板**：点击查看故障码、设备信息（SN/型号）、故障分类及报修类型。
