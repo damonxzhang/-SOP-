@@ -458,7 +458,7 @@ const EngineerApp: React.FC = () => {
                                 }}
                                 className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all flex items-center justify-center space-x-2"
                               >
-                                <span>立即处理该申请</span>
+                                <span>关闭</span>
                                 <ChevronRight size={18} />
                               </button>
                             </div>
