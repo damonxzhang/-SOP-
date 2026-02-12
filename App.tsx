@@ -47,7 +47,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-xl tracking-tight leading-none">维修SOP系统</span>
-                <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter mt-0.5">V1.1.20260212.002</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter mt-0.5">V 1.1.20260212.003</span>
               </div>
             </div>
             

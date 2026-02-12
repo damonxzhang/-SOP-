@@ -557,7 +557,7 @@ const EngineerApp: React.FC = () => {
                    }}
                    className="w-full py-5 bg-blue-600 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center space-x-2 group"
                 >
-                   <span>开始执行 SOP</span>
+                   <span>查看报修情况</span>
                    <Play size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
              </div>
