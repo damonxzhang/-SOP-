@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BookOpen, Plus, LayoutDashboard, History, 
   Search, X, CheckCircle2, CheckCircle, XCircle, Layers, Trash2, Edit3, Save,
-  Mail, ShieldAlert, Users, HardDrive, Database,
+  Mail, ShieldAlert, Users, HardDrive, Database, User as UserIcon,
   ShieldCheck, Eye, Clock, AlertTriangle, TrendingUp, BarChart3, Target, PieChart, UploadCloud, FileText,
   Activity, FileVideo, FileImage, FileDown, ChevronRight, Download, Filter, BadgeCheck, Zap, Info, Shield,
   Cpu, Settings, UserPlus, UserMinus, UserCheck, Lock, Unlock, Send, Bell, MailCheck, ExternalLink, RefreshCcw,
@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
   AreaChart, Area, Cell
 } from 'recharts';
-import { MOCK_DEVICES, MOCK_GUIDES, ALL_USERS, MOCK_INQUIRIES, MOCK_MEDIA_RESOURCES } from '../../constants';
+import { MOCK_DEVICES, MOCK_GUIDES, ALL_USERS, MOCK_INQUIRIES, MOCK_MEDIA_RESOURCES, MOCK_USER } from '../../constants';
 import { MaintenanceGuide, GuideStep, ProcessStage, User, Role, PermissionLevel, StepInquiry, MediaResource } from '../../types';
 
 const STAGES: ProcessStage[] = ['准备阶段', '诊断阶段', '维修实施', '测试验证', '完工收尾'];
@@ -97,6 +97,7 @@ const AdminDashboard: React.FC = () => {
     { id: '现场提问记录', icon: <MessageSquare size={18} />, label: '现场提问记录' },
     { id: '多媒体资料库', icon: <HardDrive size={18} />, label: '多媒体资料库' },
     { id: '用户权限管理', icon: <Users size={18} />, label: '用户权限管理' },
+    { id: '个人信息', icon: <UserIcon size={18} />, label: '个人信息' },
   ];
 
   const handleSaveGuide = (data: MaintenanceGuide) => {
@@ -118,6 +119,122 @@ const AdminDashboard: React.FC = () => {
       g.id === guideId ? { ...g, published: !g.published } : g
     ));
   };
+
+  const renderPersonalInfo = () => (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center space-x-5">
+          <div className="p-4 bg-blue-600 text-white rounded-[1.5rem] shadow-2xl shadow-blue-100 rotate-1">
+            <UserIcon size={28}/>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">个人中心</h2>
+            <p className="text-sm text-slate-500">管理您的账户信息、安全设置与偏好配置</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col items-center text-center">
+            <div className="relative mb-6">
+              <img src={MOCK_USER.avatar} className="w-32 h-32 rounded-[2.5rem] border-4 border-white shadow-2xl bg-slate-100" alt="" />
+              <button className="absolute -bottom-2 -right-2 p-3 bg-blue-600 text-white rounded-2xl shadow-xl hover:scale-110 transition-transform active:scale-95">
+                <Camera size={20} />
+              </button>
+            </div>
+            <h3 className="text-xl font-black text-slate-900">{MOCK_USER.name}</h3>
+            <p className="text-xs font-black text-blue-600 uppercase tracking-widest mt-1">系统管理员</p>
+            <div className="w-full h-px bg-slate-100 my-6" />
+            <div className="w-full space-y-4 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">员工工号</span>
+                <span className="text-xs font-bold text-slate-700 font-mono">{MOCK_USER.employeeId}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">所属部门</span>
+                <span className="text-xs font-bold text-slate-700">{MOCK_USER.department}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">入职时间</span>
+                <span className="text-xs font-bold text-slate-700">2023-05-15</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+            <h4 className="text-sm font-black text-slate-800 mb-6 flex items-center">
+              <Shield size={18} className="mr-2 text-emerald-500" /> 安全设置
+            </h4>
+            <div className="space-y-4">
+              <button className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors group">
+                <div className="flex items-center">
+                  <Lock size={16} className="mr-3 text-slate-400 group-hover:text-blue-600" />
+                  <span className="text-xs font-bold text-slate-600">修改登录密码</span>
+                </div>
+                <ChevronRight size={14} className="text-slate-300" />
+              </button>
+              <button className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors group">
+                <div className="flex items-center">
+                  <ShieldCheck size={16} className="mr-3 text-slate-400 group-hover:text-blue-600" />
+                  <span className="text-xs font-bold text-slate-600">两步身份验证</span>
+                </div>
+                <span className="text-[10px] font-black text-emerald-500 uppercase">已开启</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h4 className="text-sm font-black text-slate-800 flex items-center">
+                <Settings size={18} className="mr-2 text-blue-500" /> 基本信息编辑
+              </h4>
+              <button className="px-6 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">保存变更</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">电子邮箱</label>
+                <input type="email" defaultValue="admin@nxp.com" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-inner" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">联系电话</label>
+                <input type="tel" defaultValue="+86 138-0000-0000" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-inner" />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">个人简介</label>
+                <textarea rows={4} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-inner resize-none" defaultValue="负责系统全局维护与 SOP 标准化流程制定，拥有 10 年以上半导体设备维保经验。" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
+            <h4 className="text-sm font-black text-slate-800 mb-6 flex items-center">
+              <Activity size={18} className="mr-2 text-rose-500" /> 最近操作动态
+            </h4>
+            <div className="space-y-6">
+              {[
+                { action: '审核通过了 SOP 规程', target: 'NXT:2050i 激光校准 SOP', time: '2小时前', icon: <CheckCircle2 className="text-emerald-500"/> },
+                { action: '修改了工程师权限', target: '王技术员 (Role: Senior)', time: '5小时前', icon: <Users className="text-blue-500"/> },
+                { action: '删除了过期多媒体资料', target: 'OLD_GUIDE_V1.PDF', time: '昨天 14:20', icon: <Trash2 className="text-rose-500"/> },
+              ].map((log, i) => (
+                <div key={i} className="flex items-start space-x-4">
+                  <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">{log.icon}</div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-slate-700">
+                      {log.action} <span className="text-blue-600">"{log.target}"</span>
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase mt-1">{log.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderDashboard = () => (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -867,6 +984,7 @@ const AdminDashboard: React.FC = () => {
         {activeTab === '现场提问记录' && renderInquiries()}
         {activeTab === '多媒体资料库' && renderMediaLibrary()}
         {activeTab === '用户权限管理' && renderUserManagement()}
+        {activeTab === '个人信息' && renderPersonalInfo()}
       </div>
 
       {/* 提问详情 Modal */}
