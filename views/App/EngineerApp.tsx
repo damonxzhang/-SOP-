@@ -3,13 +3,16 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   QrCode, ChevronRight, ArrowLeft, Microscope, Cpu, PlayCircle, Play, FileText, X, 
   Send, Image as ImageIcon, Video, ShieldCheck, ScanLine, Info, Tag, Search, AlertCircle, 
-  FileSearch, AlertTriangle, Hammer, BookOpen, ExternalLink, Maximize2, History, Calendar, ClipboardCheck, ClipboardList, Camera, MessageSquare, CheckCircle2, Clock, BadgeAlert, Layers
+  FileSearch, AlertTriangle, Hammer, BookOpen, ExternalLink, Maximize2, History, Calendar, ClipboardCheck, ClipboardList, Camera, MessageSquare, CheckCircle2, Clock, BadgeAlert, Layers, Home, User as UserIcon, LogOut, Radio
 } from 'lucide-react';
 import { MOCK_DEVICES, MOCK_GUIDES, MOCK_USER, MOCK_RECORDS, ALL_USERS, MOCK_REPAIR_REQUESTS } from '../../constants';
 import { Device, MaintenanceGuide, GuideStep, RepairRecord } from '../../types';
 
 const EngineerApp: React.FC = () => {
-  const [step, setStep] = useState<'SCAN' | 'SCANNING_UI' | 'ALARM_SELECT' | 'STEP_LIST' | 'GUIDE' | 'LOG' | 'SUBMIT_INQUIRY' | 'REPAIR_DETAIL' | 'FINAL_SUBMIT'>('SCAN');
+  const [activeTab, setActiveTab] = useState<'HOME' | 'PROFILE'>('HOME');
+  const [step, setStep] = useState<'APP_LOGIN' | 'SCAN' | 'SCANNING_UI' | 'ALARM_SELECT' | 'STEP_LIST' | 'GUIDE' | 'LOG' | 'SUBMIT_INQUIRY' | 'REPAIR_DETAIL' | 'FINAL_SUBMIT'>('APP_LOGIN');
+  const [isAppAuthenticated, setIsAppAuthenticated] = useState(false);
+  const [isRfidScanning, setIsRfidScanning] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [selectedGuide, setSelectedGuide] = useState<MaintenanceGuide | null>(null);
   const [activeGuideStepIdx, setActiveGuideStepIdx] = useState(0);
@@ -155,6 +158,75 @@ const EngineerApp: React.FC = () => {
   }, []);
 
   const renderContent = () => {
+    if (step === 'APP_LOGIN') {
+      return (
+        <div className="absolute inset-0 z-[200] bg-[#0f172a] flex flex-col items-center justify-between p-8 animate-in fade-in duration-500">
+          <div className="w-full flex flex-col items-center mt-12">
+            <div className="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-500/20 mb-6">
+              <ShieldCheck className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-black text-white tracking-tight">PDA 终端</h2>
+            <p className="text-slate-400 text-xs mt-2 uppercase tracking-[0.2em]">安全运维管理系统</p>
+          </div>
+
+          <div className="flex flex-col items-center space-y-8 w-full">
+            <div className="relative w-48 h-48">
+              {/* 背景装饰环 */}
+              <div className={`absolute inset-0 border-2 border-dashed border-blue-500/30 rounded-full ${isRfidScanning ? 'animate-spin-slow' : ''}`} />
+              
+              {/* 核心扫描区 */}
+              <div className={`absolute inset-4 rounded-[2.5rem] flex flex-col items-center justify-center transition-all duration-500 ${isRfidScanning ? 'bg-blue-600/20 border-blue-500 scale-105' : 'bg-white/5 border-white/10 border-2'}`}>
+                {isRfidScanning ? (
+                  <>
+                    <ScanLine className="w-12 h-12 text-blue-400 animate-pulse" />
+                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-4">正在读取 RFID...</p>
+                  </>
+                ) : (
+                  <>
+                    <Radio className="w-12 h-12 text-slate-500" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 text-center px-4">请将工卡靠近<br/>PDA 感应区</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <button 
+              onClick={() => {
+                setIsRfidScanning(true);
+                setTimeout(() => {
+                  setIsRfidScanning(false);
+                  setIsAppAuthenticated(true);
+                  setStep('SCAN');
+                }, 2000);
+              }}
+              disabled={isRfidScanning}
+              className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-2xl ${isRfidScanning ? 'bg-slate-800 text-slate-600' : 'bg-blue-600 text-white shadow-blue-500/20 hover:bg-blue-500 active:scale-95'}`}
+            >
+              {isRfidScanning ? '识别中...' : '模拟 RFID 登录'}
+            </button>
+          </div>
+
+          <div className="w-full text-center space-y-4 mb-4">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">设备状态: 已就绪</span>
+            </div>
+            <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">NXP SEMICONDUCTORS · V1.2.0</p>
+          </div>
+
+          <style>{`
+            @keyframes spin-slow {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+            .animate-spin-slow {
+              animation: spin-slow 8s linear infinite;
+            }
+          `}</style>
+        </div>
+      );
+    }
+
     if (step === 'SCAN') {
       return (
         <div className="space-y-6 flex flex-col h-full animate-in fade-in duration-500">
@@ -1149,13 +1221,116 @@ const EngineerApp: React.FC = () => {
     return <div className="p-10 text-center text-slate-400 text-xs">加载中...</div>;
   };
 
+  const renderProfile = () => (
+    <div className="space-y-6 flex flex-col h-full animate-in fade-in duration-500 pb-20">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center text-center">
+        <div className="relative mb-4">
+          <img src={MOCK_USER.avatar} className="w-24 h-24 rounded-full border-4 border-white shadow-xl" alt="avatar" />
+          <div className="absolute bottom-1 right-1 bg-emerald-500 w-5 h-5 rounded-full border-2 border-white"></div>
+        </div>
+        <h2 className="text-xl font-black text-slate-900">{MOCK_USER.name}</h2>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">{MOCK_USER.role} · {MOCK_USER.employeeId}</p>
+        <div className="mt-4 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+            {MOCK_USER.department}
+          </div>
+          
+          <button 
+            onClick={() => {
+              setIsAppAuthenticated(false);
+              setStep('APP_LOGIN');
+              setActiveTab('HOME');
+            }}
+            className="mt-6 flex items-center space-x-2 px-6 py-2 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors"
+          >
+            <LogOut size={14} />
+            <span>锁定终端</span>
+          </button>
+        </div>
+
+      <div className="grid grid-cols-2 gap-3 px-1">
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">本月完成</p>
+          <p className="text-2xl font-black text-slate-900">42 <span className="text-[10px] text-slate-400">单</span></p>
+        </div>
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">平均耗时</p>
+          <p className="text-2xl font-black text-slate-900">1.5 <span className="text-[10px] text-slate-400">h</span></p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">常用设置</h3>
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
+          <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-slate-50 rounded-xl text-slate-400"><ShieldCheck size={18} /></div>
+              <span className="text-sm font-bold text-slate-700">安全与隐私</span>
+            </div>
+            <ChevronRight size={16} className="text-slate-300" />
+          </button>
+          <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-slate-50 rounded-xl text-slate-400"><History size={18} /></div>
+              <span className="text-sm font-bold text-slate-700">维修历史</span>
+            </div>
+            <ChevronRight size={16} className="text-slate-300" />
+          </button>
+          <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-slate-50 rounded-xl text-slate-400"><AlertCircle size={18} /></div>
+              <span className="text-sm font-bold text-slate-700">关于系统</span>
+            </div>
+            <ChevronRight size={16} className="text-slate-300" />
+          </button>
+        </div>
+      </div>
+
+      <button className="w-full py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-rose-100 transition-colors">
+        退出当前账号
+      </button>
+    </div>
+  );
+
+  const renderNavBar = () => (
+    <div className="absolute bottom-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-[150] px-8 flex items-center justify-around rounded-t-[2.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+      <button 
+        onClick={() => setActiveTab('HOME')}
+        className={`flex flex-col items-center space-y-1 transition-all ${activeTab === 'HOME' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+      >
+        <div className={`p-2 rounded-xl transition-all ${activeTab === 'HOME' ? 'bg-blue-50' : 'bg-transparent'}`}>
+          <Home size={22} />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest">首页</span>
+      </button>
+      <button 
+        onClick={() => setActiveTab('PROFILE')}
+        className={`flex flex-col items-center space-y-1 transition-all ${activeTab === 'PROFILE' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+      >
+        <div className={`p-2 rounded-xl transition-all ${activeTab === 'PROFILE' ? 'bg-blue-50' : 'bg-transparent'}`}>
+          <UserIcon size={22} />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest">我的</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="flex justify-center items-center py-4 min-h-[calc(100vh-140px)]">
       <div className="relative border-slate-900 bg-slate-900 border-[10px] rounded-[4rem] h-[740px] w-[350px] shadow-2xl overflow-hidden hidden md:block">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-[1.5rem] z-[120] flex items-center justify-center space-x-2"><div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div><div className="w-10 h-1 bg-slate-800 rounded-full"></div></div>
-        <div className="w-full h-full bg-slate-50 overflow-y-auto scrollbar-hide rounded-[3.2rem] pt-8 relative flex flex-col"><div className="px-4 flex-1 flex flex-col overflow-hidden relative">{renderContent()}</div></div>
+        <div className="w-full h-full bg-slate-50 overflow-y-auto scrollbar-hide rounded-[3.2rem] pt-8 relative flex flex-col">
+          <div className="px-4 flex-1 flex flex-col overflow-hidden relative">
+            {step === 'APP_LOGIN' ? renderContent() : (activeTab === 'HOME' ? renderContent() : renderProfile())}
+          </div>
+          {step !== 'APP_LOGIN' && renderNavBar()}
+        </div>
       </div>
-      <div className="md:hidden w-full px-4 h-[740px] bg-slate-50 overflow-y-auto rounded-3xl shadow-lg border border-slate-200 relative flex flex-col"><div className="pt-8 flex-1 flex flex-col overflow-hidden">{renderContent()}</div></div>
+      <div className="md:hidden w-full px-4 h-[740px] bg-slate-50 overflow-y-auto rounded-3xl shadow-lg border border-slate-200 relative flex flex-col">
+        <div className="pt-8 flex-1 flex flex-col overflow-hidden">
+          {step === 'APP_LOGIN' ? renderContent() : (activeTab === 'HOME' ? renderContent() : renderProfile())}
+        </div>
+        {step !== 'APP_LOGIN' && renderNavBar()}
+      </div>
       
       {previewPdfUrl && <PDFPreviewModal url={previewPdfUrl} onClose={() => setPreviewPdfUrl(null)} />}
     </div>
