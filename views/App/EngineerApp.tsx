@@ -9,7 +9,7 @@ import { MOCK_DEVICES, MOCK_GUIDES, MOCK_USER, MOCK_RECORDS, ALL_USERS, MOCK_REP
 import { Device, MaintenanceGuide, GuideStep, RepairRecord } from '../../types';
 
 const EngineerApp: React.FC = () => {
-  const [step, setStep] = useState<'SCAN' | 'SCANNING_UI' | 'ALARM_SELECT' | 'GUIDE' | 'LOG' | 'SUBMIT_INQUIRY' | 'REPAIR_DETAIL' | 'FINAL_SUBMIT'>('SCAN');
+  const [step, setStep] = useState<'SCAN' | 'SCANNING_UI' | 'ALARM_SELECT' | 'STEP_LIST' | 'GUIDE' | 'LOG' | 'SUBMIT_INQUIRY' | 'REPAIR_DETAIL' | 'FINAL_SUBMIT'>('SCAN');
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [selectedGuide, setSelectedGuide] = useState<MaintenanceGuide | null>(null);
   const [activeGuideStepIdx, setActiveGuideStepIdx] = useState(0);
@@ -267,7 +267,7 @@ const EngineerApp: React.FC = () => {
                                         setSelectedGuide(guide); 
                                         setActiveGuideStepIdx(0); 
                                         setShowHistoryOverlay(false); 
-                                        setStep('GUIDE'); 
+                                        setStep('STEP_LIST'); 
                                      }} 
                                      className="flex flex-col p-5 bg-white rounded-3xl border border-slate-100 hover:border-blue-400 hover:bg-blue-50 transition-all shadow-sm group text-left relative overflow-hidden"
                                   >
@@ -339,13 +339,13 @@ const EngineerApp: React.FC = () => {
                                   <div 
                                     key={guide.id}
                                     onClick={() => {
-                                       setSelectedGuide(guide);
-                                       setActiveGuideStepIdx(0);
-                                       setShowHistoryOverlay(false);
-                                       setStep('GUIDE');
-                                       setShowAllAlarms(false);
-                                    }}
-                                    className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-between group active:bg-blue-50 transition-all cursor-pointer"
+                                        setSelectedGuide(guide);
+                                        setActiveGuideStepIdx(0);
+                                        setShowHistoryOverlay(false);
+                                        setStep('STEP_LIST');
+                                        setShowAllAlarms(false);
+                                     }} 
+                                     className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-between group active:bg-blue-50 transition-all cursor-pointer"
                                   >
                                      <div className="flex items-center space-x-4">
                                         <span className="text-[11px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg uppercase tracking-wider">{guide.faultCode}</span>
@@ -403,6 +403,72 @@ const EngineerApp: React.FC = () => {
                       ))}
                    </div>
                 </div>
+             </div>
+          </div>
+       );
+    }
+
+    if (step === 'STEP_LIST' && selectedGuide) {
+       return (
+          <div className="flex flex-col h-full animate-in slide-in-from-bottom-6 duration-500 relative pb-10">
+             <div className="flex items-center space-x-3 mb-6 shrink-0">
+                <button onClick={() => setStep('ALARM_SELECT')} className="p-2 bg-slate-100 rounded-full text-slate-500"><ArrowLeft size={18}/></button>
+                <div className="flex-1">
+                   <h2 className="text-sm font-black text-slate-900">规程步骤清单: {selectedGuide.faultCode}</h2>
+                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{selectedGuide.faultCategory}</p>
+                </div>
+             </div>
+
+             <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide">
+                <div className="bg-blue-50/50 p-5 rounded-[2rem] border border-blue-100/50 mb-2">
+                   <div className="flex items-center space-x-3">
+                      <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
+                         <ClipboardList size={20} />
+                      </div>
+                      <div>
+                         <h4 className="text-xs font-black text-slate-900">执行优先级建议</h4>
+                         <p className="text-[10px] text-blue-600/70 font-bold uppercase tracking-tight mt-0.5">已根据历史维修反馈次数进行智能排序</p>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="space-y-3">
+                   {sortedSteps.map((s, idx) => (
+                      <div 
+                        key={s.id}
+                        className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm relative group"
+                      >
+                         <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg uppercase tracking-wider">步骤 {idx + 1}</span>
+                            {s.historyRepairCount !== undefined && (
+                               <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100">
+                                  <History size={10} />
+                                  <span className="text-[9px] font-black uppercase tracking-tighter">反馈次数: {s.historyRepairCount}</span>
+                               </div>
+                            )}
+                         </div>
+                         <h3 className="text-sm font-black text-slate-800 leading-snug">{s.title}</h3>
+                         <p className="text-[10px] text-slate-400 mt-2 line-clamp-2 italic">{s.description}</p>
+                         <div className="mt-4 flex items-center space-x-2">
+                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{s.stage}</span>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+
+             <div className="pt-6 shrink-0">
+                <button 
+                   onClick={() => {
+                      setActiveGuideStepIdx(0);
+                      setShowHistoryOverlay(true);
+                      setStep('GUIDE');
+                   }}
+                   className="w-full py-5 bg-blue-600 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-200 active:scale-95 transition-all flex items-center justify-center space-x-2 group"
+                >
+                   <span>开始执行 SOP</span>
+                   <Play size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
              </div>
           </div>
        );
