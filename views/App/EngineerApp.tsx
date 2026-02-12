@@ -1243,51 +1243,9 @@ const EngineerApp: React.FC = () => {
             className="mt-6 flex items-center space-x-2 px-6 py-2 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors"
           >
             <LogOut size={14} />
-            <span>锁定终端</span>
+            <span>退出登陆</span>
           </button>
         </div>
-
-      <div className="grid grid-cols-2 gap-3 px-1">
-        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">本月完成</p>
-          <p className="text-2xl font-black text-slate-900">42 <span className="text-[10px] text-slate-400">单</span></p>
-        </div>
-        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">平均耗时</p>
-          <p className="text-2xl font-black text-slate-900">1.5 <span className="text-[10px] text-slate-400">h</span></p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">常用设置</h3>
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm divide-y divide-slate-50 overflow-hidden">
-          <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-50 rounded-xl text-slate-400"><ShieldCheck size={18} /></div>
-              <span className="text-sm font-bold text-slate-700">安全与隐私</span>
-            </div>
-            <ChevronRight size={16} className="text-slate-300" />
-          </button>
-          <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-50 rounded-xl text-slate-400"><History size={18} /></div>
-              <span className="text-sm font-bold text-slate-700">维修历史</span>
-            </div>
-            <ChevronRight size={16} className="text-slate-300" />
-          </button>
-          <button className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-50 rounded-xl text-slate-400"><AlertCircle size={18} /></div>
-              <span className="text-sm font-bold text-slate-700">关于系统</span>
-            </div>
-            <ChevronRight size={16} className="text-slate-300" />
-          </button>
-        </div>
-      </div>
-
-      <button className="w-full py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-rose-100 transition-colors">
-        退出当前账号
-      </button>
     </div>
   );
 
