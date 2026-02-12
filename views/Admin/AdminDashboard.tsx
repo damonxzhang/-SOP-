@@ -410,11 +410,7 @@ const AdminDashboard: React.FC = () => {
                                 <ShieldAlert size={10} className="mr-1" /> 已禁用
                               </span>
                             )}
-                            {g.totalOccurrenceCount !== undefined && (
-                              <span className="text-[10px] font-black px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md uppercase flex items-center">
-                                <History size={10} className="mr-1" /> {g.totalOccurrenceCount} 次维修
-                              </span>
-                            )}
+                            {/* 去掉维修次数显示 */}
                           </div>
                           <h3 className="text-lg font-black text-slate-800">{g.faultCategory}</h3>
                           <p className="text-xs text-slate-500 line-clamp-1 italic max-w-md">{g.faultPhenomenon}</p>
