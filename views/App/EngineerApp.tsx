@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   QrCode, ChevronRight, ArrowLeft, Microscope, Cpu, PlayCircle, Play, FileText, X, 
   Send, Image as ImageIcon, Video, ShieldCheck, ScanLine, Info, Tag, Search, AlertCircle, 
-  FileSearch, AlertTriangle, Hammer, BookOpen, ExternalLink, Maximize2, History, Calendar, ClipboardCheck, ClipboardList, Camera, MessageSquare, CheckCircle2, Clock, BadgeAlert
+  FileSearch, AlertTriangle, Hammer, BookOpen, ExternalLink, Maximize2, History, Calendar, ClipboardCheck, ClipboardList, Camera, MessageSquare, CheckCircle2, Clock, BadgeAlert, Layers
 } from 'lucide-react';
 import { MOCK_DEVICES, MOCK_GUIDES, MOCK_USER, MOCK_RECORDS, ALL_USERS, MOCK_REPAIR_REQUESTS } from '../../constants';
 import { Device, MaintenanceGuide, GuideStep, RepairRecord } from '../../types';
@@ -317,8 +317,8 @@ const EngineerApp: React.FC = () => {
 
                 {/* 全部报警代码弹窗 */}
                 {showAllAlarms && (
-                   <div className="fixed inset-0 z-[250] bg-slate-900/60 backdrop-blur-md flex items-end animate-in fade-in duration-300">
-                      <div className="w-full bg-white rounded-t-[3rem] shadow-2xl flex flex-col h-[90%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden">
+                   <div className="absolute inset-0 z-[250] bg-slate-900/60 backdrop-blur-md flex items-end animate-in fade-in duration-300 -mx-4">
+                      <div className="w-full bg-white rounded-t-[3rem] shadow-2xl flex flex-col h-[95%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden">
                          <div className="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
                             <div className="flex items-center space-x-4">
                                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
@@ -361,6 +361,87 @@ const EngineerApp: React.FC = () => {
                          </div>
                       </div>
                    </div>
+                )}
+
+                {/* 报修申请详情弹窗 - 嵌套在手机边框内 */}
+                {viewingRequest && (
+                  <div className="absolute inset-0 z-[260] bg-slate-900/60 backdrop-blur-md flex items-end animate-in fade-in duration-300 -mx-4">
+                    <div className="w-full bg-white rounded-t-[3rem] shadow-2xl flex flex-col h-[95%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden">
+                      <div className="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                            <ClipboardList size={24}/>
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-black text-slate-900">报修申请详情</h3>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">单号: {viewingRequest.id}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setViewingRequest(null)} className="p-3 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-transform">
+                          <X size={24}/>
+                        </button>
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide pb-20">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                                <p className="text-[10px] text-slate-400 font-black uppercase mb-1">报修机台</p>
+                                <p className="text-xs font-black text-slate-800">{viewingRequest.deviceName}</p>
+                                <p className="text-[9px] font-mono text-slate-400 mt-0.5">{viewingRequest.deviceSN}</p>
+                              </div>
+                              <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                                <p className="text-[10px] text-slate-400 font-black uppercase mb-1">报修时间</p>
+                                <p className="text-xs font-black text-slate-800">{viewingRequest.requestTime}</p>
+                              </div>
+                            </div>
+
+                            <div className="p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-lg">{viewingRequest.faultCode}</span>
+                                  <h4 className="text-[11px] font-black text-blue-900 uppercase">故障描述</h4>
+                                </div>
+                              </div>
+                              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">
+                                "{viewingRequest.description}"
+                              </p>
+                            </div>
+
+                            {viewingRequest.photos && viewingRequest.photos.length > 0 && (
+                              <div className="space-y-4">
+                                <p className="text-[10px] text-slate-400 font-black uppercase px-1 flex items-center">
+                                  <ImageIcon size={14} className="mr-2" /> 现场报修图片
+                                </p>
+                                <div className="grid grid-cols-2 gap-4">
+                                  {viewingRequest.photos.map((url: string, index: number) => (
+                                    <div key={index} className="aspect-square rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+                                      <img src={url} alt={`报修现场-${index}`} className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="pt-4">
+                              <button 
+                                onClick={() => {
+                                  const guide = MOCK_GUIDES.find(g => g.deviceId === viewingRequest.deviceId && g.faultCode === viewingRequest.faultCode);
+                                  if (guide) {
+                                    setSelectedGuide(guide);
+                                    setActiveGuideStepIdx(0);
+                                    setStep('STEP_LIST');
+                                    setViewingRequest(null);
+                                  }
+                                }}
+                                className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all flex items-center justify-center space-x-2"
+                              >
+                                <span>立即处理该申请</span>
+                                <ChevronRight size={18} />
+                              </button>
+                            </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* 新增：待处理维修申请模块 */}
@@ -1054,110 +1135,6 @@ const EngineerApp: React.FC = () => {
       <div className="md:hidden w-full px-4 h-[740px] bg-slate-50 overflow-y-auto rounded-3xl shadow-lg border border-slate-200 relative flex flex-col"><div className="pt-8 flex-1 flex flex-col overflow-hidden">{renderContent()}</div></div>
       
       {previewPdfUrl && <PDFPreviewModal url={previewPdfUrl} onClose={() => setPreviewPdfUrl(null)} />}
-      
-      {/* 报修申请详情弹窗 - 移至最外层确保显示 */}
-      {viewingRequest && (
-        <div className="fixed inset-0 z-[500] bg-slate-900/60 backdrop-blur-md flex items-end animate-in fade-in duration-300 p-4">
-          <div className="w-full max-w-[350px] mx-auto bg-white rounded-t-[3rem] rounded-b-[3rem] md:rounded-b-none shadow-2xl flex flex-col max-h-[90%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden mb-4 md:mb-0">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl">
-                  <ClipboardList size={20}/>
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900">报修申请详情</h3>
-                  <p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">单号: {viewingRequest.id}</p>
-                </div>
-              </div>
-              <button onClick={() => setViewingRequest(null)} className="p-2.5 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-transform">
-                <X size={20}/>
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto space-y-6 scrollbar-hide pb-10">
-                  <div className="space-y-5">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-[9px] text-slate-400 font-black uppercase mb-1">报修机台</p>
-                        <p className="text-xs font-black text-slate-800">{viewingRequest.deviceName}</p>
-                        <p className="text-[8px] font-mono text-slate-400 mt-0.5">{viewingRequest.deviceSN}</p>
-                      </div>
-                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-[9px] text-slate-400 font-black uppercase mb-1">报修时间</p>
-                        <p className="text-xs font-black text-slate-800">{viewingRequest.requestTime}</p>
-                      </div>
-                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-[9px] text-slate-400 font-black uppercase mb-1">故障分类</p>
-                        <p className="text-xs font-black text-slate-800">
-                          {MOCK_GUIDES.find(g => g.deviceId === viewingRequest.deviceId && g.faultCode === viewingRequest.faultCode)?.faultCategory || '一般故障'}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-[9px] text-slate-400 font-black uppercase mb-1">报修类型</p>
-                        <p className="text-xs font-black text-blue-600">
-                          {viewingRequest.priority === 'high' ? '紧急报修' : '普通报修'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded-md">{viewingRequest.faultCode}</span>
-                          <h4 className="text-[10px] font-black text-blue-900 uppercase">故障描述</h4>
-                        </div>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${
-                          viewingRequest.priority === 'high' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
-                        }`}>
-                          {viewingRequest.priority === 'high' ? '紧急处理' : '普通维修'}
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium text-slate-700 leading-relaxed italic">
-                        "{viewingRequest.description}"
-                      </p>
-                    </div>
-
-                {viewingRequest.photos && viewingRequest.photos.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-[9px] text-slate-400 font-black uppercase px-1 flex items-center">
-                      <ImageIcon size={12} className="mr-1" /> 现场报修图片
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {viewingRequest.photos.map((url: string, index: number) => (
-                        <div key={index} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 shadow-sm active:scale-95 transition-transform cursor-pointer">
-                          <img src={url} alt={`报修现场-${index}`} className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2.5">
-                  <p className="text-[9px] text-slate-400 font-black uppercase px-1">报修人信息</p>
-                  <div className="flex items-center p-3.5 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 mr-3 font-black text-sm">
-                      {viewingRequest.requester.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-black text-slate-800">{viewingRequest.requester}</p>
-                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">现场工程师 / 生产线</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-slate-100 bg-white">
-              <button 
-                onClick={() => setViewingRequest(null)}
-                className="w-full py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
-              >
-                <span>关闭详情</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
