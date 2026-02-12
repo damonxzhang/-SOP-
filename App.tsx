@@ -45,7 +45,10 @@ const App: React.FC = () => {
               <div className="bg-blue-600 p-1.5 rounded-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">维修SOP系统</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-xl tracking-tight leading-none">维修SOP系统</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter mt-0.5">V1.1.20260211</span>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
