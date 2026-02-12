@@ -230,11 +230,6 @@ const EngineerApp: React.FC = () => {
                                   <span className="text-[11px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg uppercase tracking-wider">
                                      {guide.faultCode}
                                   </span>
-                                  {guide.totalOccurrenceCount && (
-                                     <span className="text-[9px] font-black bg-rose-50 text-rose-600 px-2 py-1 rounded-lg border border-rose-100 flex items-center">
-                                        <History size={10} className="mr-1" /> {guide.totalOccurrenceCount} 次发生
-                                     </span>
-                                  )}
                                </div>
                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                                   {guide.scope}
@@ -424,7 +419,6 @@ const EngineerApp: React.FC = () => {
                           >
                              <div className="flex justify-between items-center">
                                 <span className="text-xs font-black">第 {idx + 1} 步: {s.title}</span>
-                                <span className="text-[9px] opacity-70 font-bold uppercase tracking-widest">{s.historyRepairCount || 0} 次维修</span>
                              </div>
                           </button>
                        ))}
