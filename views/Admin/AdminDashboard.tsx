@@ -13,8 +13,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
   AreaChart, Area, Cell
 } from 'recharts';
-import { MOCK_DEVICES, MOCK_GUIDES, ALL_USERS, MOCK_RECORDS, MOCK_INQUIRIES } from '../../constants';
-import { MaintenanceGuide, GuideStep, ProcessStage, RepairRecord, User, Role, PermissionLevel, StepInquiry } from '../../types';
+import { MOCK_DEVICES, MOCK_GUIDES, ALL_USERS, MOCK_INQUIRIES, MOCK_MEDIA_RESOURCES } from '../../constants';
+import { MaintenanceGuide, GuideStep, ProcessStage, User, Role, PermissionLevel, StepInquiry, MediaResource } from '../../types';
 
 const STAGES: ProcessStage[] = ['准备阶段', '诊断阶段', '维修实施', '测试验证', '完工收尾'];
 const DEPARTMENTS = ['光学系统部', '制造二部', '运维管理处', '第三方维保', '工艺控制部'];
@@ -22,7 +22,6 @@ const DEPARTMENTS = ['光学系统部', '制造二部', '运维管理处', '第�
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('统计看板');
   const [guides, setGuides] = useState<MaintenanceGuide[]>(MOCK_GUIDES);
-  const [records] = useState<RepairRecord[]>(MOCK_RECORDS);
   const [users, setUsers] = useState<User[]>(ALL_USERS);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
@@ -53,11 +52,17 @@ const AdminDashboard: React.FC = () => {
     fetchUsers();
   }, []);
   const [inquiries, setInquiries] = useState<StepInquiry[]>(MOCK_INQUIRIES);
+  const [mediaResources, setMediaResources] = useState<MediaResource[]>(MOCK_MEDIA_RESOURCES);
+  const [mediaSearch, setMediaSearch] = useState('');
+  const [mediaTypeFilter, setMediaTypeFilter] = useState('all');
   
   const [editingGuide, setEditingGuide] = useState<MaintenanceGuide | null>(null);
-  const [viewingRecord, setViewingRecord] = useState<RepairRecord | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewingInquiry, setViewingInquiry] = useState<StepInquiry | null>(null);
+  const [viewingMedia, setViewingMedia] = useState<MediaResource | null>(null);
+  const [editingMedia, setEditingMedia] = useState<MediaResource | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState<Partial<MediaResource> | null>(null);
+  const [newTag, setNewTag] = useState('');
 
   // SOP 库筛选状态
   const [guideSearch, setGuideSearch] = useState('');
@@ -85,9 +90,8 @@ const AdminDashboard: React.FC = () => {
     { id: '统计看板', icon: <LayoutDashboard size={18} />, label: '统计看板' },
     { id: '标准 SOP 库', icon: <BookOpen size={18} />, label: '标准 SOP 库' },
     { id: '现场提问记录', icon: <MessageSquare size={18} />, label: '现场提问记录' },
-    { id: '数字化存证', icon: <History size={18} />, label: '数字化存证' },
+    { id: '多媒体资料库', icon: <HardDrive size={18} />, label: '多媒体资料库' },
     { id: '用户权限管理', icon: <Users size={18} />, label: '用户权限管理' },
-    { id: '邮件通知中心', icon: <Mail size={18} />, label: '邮件通知中心' },
   ];
 
   const handleSaveGuide = (data: MaintenanceGuide) => {
@@ -240,132 +244,436 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderNotificationCenter = () => {
-    const templates = [
-      { id: 't1', title: '高危维保操作提醒', description: '当工程师开启硬件更换等高危任务时，自动抄送至主管。', type: '风险预警', status: 'active' },
-      { id: 't2', title: 'SOP 版本强制更新通知', description: '规程手册版本升级后，全员推送新版本差异与注意事项。', type: '业务通知', status: 'active' },
-      { id: 't3', title: 'MTTR 异常超时报警', description: '单次维保时长超过 MTTR 标准 50% 时触发预警。', type: '性能告警', status: 'disabled' }
-    ];
-
-    const logs = [
-      { id: 'l1', to: 'admin@semicon.com', subject: '[预警] NXT:2050i 正在执行高危操作', time: '10分钟前', status: 'delivered' },
-      { id: 'l2', to: 'tech_support@asml.com', subject: '[日志] 数字化存证包已生成 (ID: R1)', time: '1小时前', status: 'delivered' },
-    ];
+  const renderMediaLibrary = () => {
+    const filteredMedia = mediaResources.filter(media => {
+      const matchSearch = media.name.toLowerCase().includes(mediaSearch.toLowerCase()) ||
+                          media.tags.some(tag => tag.toLowerCase().includes(mediaSearch.toLowerCase()));
+      const matchType = mediaTypeFilter === 'all' || media.type === mediaTypeFilter;
+      return matchSearch && matchType;
+    });
 
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
-         <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center space-x-5">
-               <div className="p-4 bg-rose-600 text-white rounded-[1.5rem] shadow-2xl shadow-rose-100 rotate-2"><Bell size={28}/></div>
-               <div><h2 className="text-2xl font-black text-slate-900 tracking-tight">邮件通知与触达策略</h2><p className="text-sm text-slate-500">定义维保生命周期内的自动化通知流程，保障关键信息 0 延迟下达</p></div>
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center space-x-5">
+            <div className="p-4 bg-indigo-600 text-white rounded-[1.5rem] shadow-2xl shadow-indigo-100 rotate-1">
+              <HardDrive size={28}/>
             </div>
-            <button className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-sm flex items-center shadow-2xl hover:bg-rose-600 transition-all active:scale-95"><Send size={20} className="mr-2" /> 发送广播通知</button>
-         </div>
-
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6">
-               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center"><Layers size={18} className="mr-2 text-rose-500"/> 通知策略模板库</h3>
-               {templates.map(t => (
-                  <div key={t.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-lg transition-all group">
-                    <div className="flex items-start justify-between">
-                       <div className="flex items-start space-x-4">
-                          <div className={`p-3 rounded-2xl ${t.status === 'active' ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400'}`}><Mail size={24}/></div>
-                          <div className="space-y-1">
-                             <div className="flex items-center space-x-2">
-                               <span className="text-[9px] font-black px-2 py-0.5 bg-slate-100 text-slate-500 rounded uppercase tracking-tighter">{t.type}</span>
-                               {t.status === 'active' ? <span className="text-[9px] font-black text-emerald-500 flex items-center uppercase"><Zap size={10} className="mr-1"/> 运行中</span> : <span className="text-[9px] font-black text-slate-400 uppercase">已禁用</span>}
-                             </div>
-                             <h4 className="text-base font-black text-slate-800">{t.title}</h4>
-                             <p className="text-xs text-slate-500 leading-relaxed">{t.description}</p>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-               ))}
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">多媒体数字化资料库</h2>
+              <p className="text-sm text-slate-500">统一管理维保过程中的图片、视频及技术文档，支持标签化检索与快速预览</p>
             </div>
+          </div>
+          <button 
+            onClick={() => setUploadingMedia({ name: '', tags: [], type: 'image' })}
+            className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-sm flex items-center shadow-2xl hover:bg-indigo-600 transition-all active:scale-95"
+          >
+            <UploadCloud size={20} className="mr-2" /> 上传多媒体资料
+          </button>
+        </div>
 
-            <div className="space-y-6">
-               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center"><History size={18} className="mr-2 text-blue-500"/> 最近发送审计</h3>
-               <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-50">
-                  {logs.map(log => (
-                     <div key={log.id} className="p-5 hover:bg-slate-50 transition-colors">
-                        <div className="flex justify-between items-start mb-1">
-                           <p className="text-[10px] font-mono text-slate-400 uppercase tracking-tighter">{log.time}</p>
-                           <span className="text-[9px] font-black text-emerald-500 uppercase flex items-center"><MailCheck size={10} className="mr-1"/> 已投递</span>
-                        </div>
-                        <p className="text-[11px] font-black text-slate-800 line-clamp-1">{log.subject}</p>
-                        <p className="text-[10px] text-slate-400 mt-1 font-medium">{log.to}</p>
-                     </div>
+        <div className="bg-white px-8 py-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            {[
+              { id: 'all', label: '全部' },
+              { id: 'image', label: '图片' },
+              { id: 'video', label: '视频' },
+              { id: 'pdf', label: '文档' },
+            ].map(type => (
+              <button
+                key={type.id}
+                onClick={() => setMediaTypeFilter(type.id)}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                  mediaTypeFilter === type.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 relative min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
+            <input 
+              placeholder="搜索文件名或标签..." 
+              value={mediaSearch}
+              onChange={(e) => setMediaSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner" 
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredMedia.map(media => (
+            <div key={media.id} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden group hover:shadow-xl transition-all flex flex-col">
+              <div className="aspect-video bg-slate-50 relative flex items-center justify-center overflow-hidden">
+                {media.type === 'image' && <img src={media.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={media.name} />}
+                {media.type === 'video' && <FileVideo size={48} className="text-slate-200 group-hover:text-indigo-200 transition-colors" />}
+                {media.type === 'pdf' && <FileText size={48} className="text-slate-200 group-hover:text-rose-200 transition-colors" />}
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                  <button 
+                    onClick={() => setViewingMedia(media)}
+                    className="p-2.5 bg-white text-slate-900 rounded-xl hover:bg-indigo-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"
+                  >
+                    <Eye size={18}/>
+                  </button>
+                  <button 
+                    onClick={() => setEditingMedia(media)}
+                    className="p-2.5 bg-white text-slate-900 rounded-xl hover:bg-indigo-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"
+                  >
+                    <Edit3 size={18}/>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if(confirm('确定要删除这项资料吗？')) {
+                        setMediaResources(prev => prev.filter(m => m.id !== media.id));
+                      }
+                    }}
+                    className="p-2.5 bg-white text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-150"
+                  >
+                    <Trash2 size={18}/>
+                  </button>
+                </div>
+                <div className="absolute top-3 right-3 px-2 py-1 bg-white/90 backdrop-blur shadow-sm rounded-lg text-[8px] font-black uppercase text-slate-500">{media.size}</div>
+              </div>
+              <div className="p-5 flex-1 flex flex-col space-y-3">
+                <h3 className="text-sm font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">{media.name}</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {media.tags.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-md text-[8px] font-black uppercase border border-slate-100">{tag}</span>
                   ))}
-               </div>
+                </div>
+                <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                  <span className="flex items-center"><Clock size={10} className="mr-1"/> {media.uploadTime}</span>
+                  <span className="flex items-center"><Users size={10} className="mr-1"/> {media.uploader}</span>
+                </div>
+              </div>
             </div>
-         </div>
+          ))}
+          {filteredMedia.length === 0 && (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white rounded-[3rem] border border-slate-100 text-slate-300">
+              <HardDrive size={48} className="mb-4 opacity-20" />
+              <p className="text-sm font-black uppercase tracking-widest">未找到匹配的资料</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
-  const renderDigitalEvidence = () => (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center space-x-4"><div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl shadow-inner"><ShieldCheck size={24}/></div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">总体合规率</p><h4 className="text-2xl font-black text-slate-900">98.5%</h4></div></div>
-        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center space-x-4"><div className="p-4 bg-blue-50 text-blue-600 rounded-2xl shadow-inner"><BadgeCheck size={24}/></div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">存证记录总数</p><h4 className="text-2xl font-black text-slate-900">{records.length} 条</h4></div></div>
-        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center space-x-4"><div className="p-4 bg-rose-50 text-rose-600 rounded-2xl shadow-inner"><AlertTriangle size={24}/></div><div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">异常预警次数</p><h4 className="text-2xl font-black text-slate-900">2 例</h4></div></div>
-      </div>
-      <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/30">
-           <div className="flex items-center space-x-3"><History className="text-blue-600" size={22}/><h3 className="text-lg font-black text-slate-900">全量审计证据流</h3></div>
-           <div className="flex items-center space-x-3">
-              <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16}/><input placeholder="搜索 SN..." className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-64 shadow-sm font-medium"/></div>
-              <button className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black shadow-lg flex items-center"><Download size={14} className="mr-2"/> 导出报告</button>
-           </div>
+  const renderMediaViewModal = () => {
+    if (!viewingMedia) return null;
+
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in">
+        <div className="bg-white w-full max-w-5xl h-[85vh] rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20">
+          <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div className="flex items-center space-x-5">
+              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner rotate-3">
+                {viewingMedia.type === 'image' && <FileImage size={28}/>}
+                {viewingMedia.type === 'video' && <FileVideo size={28}/>}
+                {(viewingMedia.type === 'pdf' || viewingMedia.type === 'doc') && <FileText size={28}/>}
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">{viewingMedia.name}</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  {viewingMedia.type.toUpperCase()} · {viewingMedia.size} · {viewingMedia.uploadTime} 上传
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button className="p-3 bg-slate-100 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all"><Download size={20}/></button>
+              <button onClick={() => setViewingMedia(null)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all"><X size={24}/></button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto bg-slate-50 flex items-center justify-center p-10">
+            {viewingMedia.type === 'image' && (
+              <img src={viewingMedia.url} className="max-w-full max-h-full rounded-3xl shadow-2xl object-contain" alt={viewingMedia.name} />
+            )}
+            {viewingMedia.type === 'video' && (
+              <div className="w-full max-w-4xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center relative">
+                <FileVideo size={80} className="text-white/20" />
+                <p className="absolute bottom-10 text-white/40 text-xs font-mono">VIDEO_STREAM_PREVIEW_MOCK</p>
+              </div>
+            )}
+            {(viewingMedia.type === 'pdf' || viewingMedia.type === 'doc') && (
+              <div className="w-full max-w-3xl aspect-[1/1.4] bg-white rounded-3xl shadow-2xl p-12 flex flex-col items-center justify-center space-y-6">
+                <FileText size={120} className="text-indigo-100" />
+                <div className="text-center">
+                  <h4 className="text-lg font-black text-slate-800 mb-2">文档预览准备就绪</h4>
+                  <p className="text-sm text-slate-400">点击上方下载按钮可获取完整文档，或在正式环境中集成 PDF.js 查看器</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="px-10 py-6 border-t border-slate-100 bg-white flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {viewingMedia.tags.map(tag => (
+                <span key={tag} className="px-3 py-1 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase border border-slate-100">{tag}</span>
+              ))}
+            </div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
+              <Users size={14} className="mr-2"/> 上传者: {viewingMedia.uploader}
+            </div>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/50">
-              <tr>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">存证 ID / 故障码</th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">执行工程师</th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">所属机台</th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">提交来源</th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">审计状态</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {records.map(record => { 
-                const engineer = users.find(u => u.id === record.engineerId); 
-                const guide = guides.find(g => g.id === record.guideId); 
-                const device = MOCK_DEVICES.find(d => d.id === guide?.deviceId); 
-                return (
-                  <tr key={record.id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-8 py-6"><div className="flex flex-col"><span className="text-xs font-black text-slate-900">{record.id.toUpperCase()}</span><span className="text-[10px] text-blue-600 font-black uppercase tracking-tighter">{guide?.faultCode || 'GENERAL'}</span></div></td>
-                    <td className="px-4 py-6 text-xs font-bold">{engineer?.name}</td>
-                    <td className="px-4 py-6 text-xs">{device?.model}</td>
-                    <td className="px-4 py-6">
-                      {record.submissionSource ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                          record.submissionSource === 'PASS' 
-                            ? 'bg-blue-50 text-blue-600 border border-blue-100' 
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}>
-                          {record.submissionSource === 'PASS' ? <CheckCircle size={10} className="mr-1"/> : <XCircle size={10} className="mr-1"/>}
-                          {record.submissionSource}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] text-slate-300 italic">未记录</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-6"><span className="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-600 uppercase border border-emerald-100"><Shield size={10} className="mr-1"/> 合规归档</span></td>
-                    <td className="px-8 py-6 text-right"><button onClick={() => setViewingRecord(record)} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:text-blue-600 shadow-sm active:scale-90 transition-all"><Eye size={16}/></button></td>
-                  </tr>
-                ) 
-              })}
-            </tbody>
-          </table>
+      </div>
+    );
+  };
+
+  const renderMediaEditModal = () => {
+    if (!editingMedia) return null;
+
+    const handleUpdateMedia = () => {
+      setMediaResources(prev => prev.map(m => m.id === editingMedia.id ? editingMedia : m));
+      setEditingMedia(null);
+    };
+
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in">
+        <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20">
+          <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div className="flex items-center space-x-5">
+              <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center shadow-inner rotate-3">
+                <Edit3 size={28}/>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">编辑资料信息</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">资料 ID: {editingMedia.id}</p>
+              </div>
+            </div>
+            <button onClick={() => setEditingMedia(null)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all"><X size={24}/></button>
+          </div>
+
+          <div className="p-10 space-y-8">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">文件名称</label>
+                <input 
+                  type="text"
+                  className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-inner"
+                  value={editingMedia.name}
+                  onChange={(e) => setEditingMedia({ ...editingMedia, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">资料类型</label>
+                <select 
+                  className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-inner"
+                  value={editingMedia.type}
+                  onChange={(e) => setEditingMedia({ ...editingMedia, type: e.target.value as any })}
+                >
+                  <option value="image">图片材料</option>
+                  <option value="video">视频教学</option>
+                  <option value="pdf">PDF 规程文档</option>
+                  <option value="doc">Word/Excel 资料</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">标签管理 (按回车添加)</label>
+                <div className="space-y-3">
+                  <input 
+                    type="text"
+                    placeholder="添加新标签..."
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-inner"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newTag.trim()) {
+                        setEditingMedia({
+                          ...editingMedia,
+                          tags: [...editingMedia.tags, newTag.trim()]
+                        });
+                        setNewTag('');
+                      }
+                    }}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {editingMedia.tags.map(tag => (
+                      <span key={tag} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black flex items-center border border-amber-100 animate-in zoom-in-95">
+                        {tag}
+                        <button 
+                          onClick={() => setEditingMedia({
+                            ...editingMedia,
+                            tags: editingMedia.tags.filter(t => t !== tag)
+                          })} 
+                          className="ml-2 hover:text-rose-500 transition-colors"
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-10 py-8 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+            <button 
+              onClick={() => setEditingMedia(null)}
+              className="px-8 py-3 text-slate-500 font-black text-sm hover:text-slate-800 transition-colors mr-4"
+            >
+              取消
+            </button>
+            <button 
+              onClick={handleUpdateMedia}
+              disabled={!editingMedia.name}
+              className={`px-12 py-3.5 rounded-2xl font-black text-sm shadow-xl transition-all active:scale-95 flex items-center ${
+                editingMedia.name ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              <Save size={18} className="mr-2" /> 保存变更
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const renderUploadModal = () => {
+    if (!uploadingMedia) return null;
+
+    const handleAddTag = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && newTag.trim()) {
+        setUploadingMedia({
+          ...uploadingMedia,
+          tags: [...(uploadingMedia.tags || []), newTag.trim()]
+        });
+        setNewTag('');
+      }
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+      setUploadingMedia({
+        ...uploadingMedia,
+        tags: (uploadingMedia.tags || []).filter(t => t !== tagToRemove)
+      });
+    };
+
+    const handleSaveMedia = () => {
+      if (!uploadingMedia.name) return;
+      
+      const newMediaResource: MediaResource = {
+        id: `m${Date.now()}`,
+        name: uploadingMedia.name,
+        type: uploadingMedia.type || 'image',
+        url: '#', // In a real app, this would be the uploaded file URL
+        size: '1.2 MB', // Mock size
+        tags: uploadingMedia.tags || [],
+        uploadTime: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        uploader: '管理员'
+      };
+
+      setMediaResources([newMediaResource, ...mediaResources]);
+      setUploadingMedia(null);
+    };
+
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in">
+        <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20">
+          <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div className="flex items-center space-x-5">
+              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner rotate-3">
+                <UploadCloud size={28}/>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">上传多媒体数字化资料</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">支持图片、视频、PDF 及常用办公文档</p>
+              </div>
+            </div>
+            <button onClick={() => setUploadingMedia(null)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all"><X size={24}/></button>
+          </div>
+
+          <div className="p-10 space-y-8">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">文件名称</label>
+                <input 
+                  type="text"
+                  placeholder="请输入资料名称 (例如: NXT:2050i 维护手册)"
+                  className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
+                  value={uploadingMedia.name}
+                  onChange={(e) => setUploadingMedia({ ...uploadingMedia, name: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">资料类型</label>
+                  <select 
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
+                    value={uploadingMedia.type}
+                    onChange={(e) => setUploadingMedia({ ...uploadingMedia, type: e.target.value as any })}
+                  >
+                    <option value="image">图片材料</option>
+                    <option value="video">视频教学</option>
+                    <option value="pdf">PDF 规程文档</option>
+                    <option value="doc">Word/Excel 资料</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">上传文件</label>
+                  <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer group">
+                    <Plus size={16} className="mr-2 group-hover:scale-125 transition-transform" />
+                    <span className="text-[10px] font-black uppercase">选择本地文件</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">添加检索标签</label>
+                <div className="space-y-3">
+                  <input 
+                    type="text"
+                    placeholder="输入标签按回车添加..."
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={handleAddTag}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {uploadingMedia.tags?.map(tag => (
+                      <span key={tag} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black flex items-center border border-indigo-100 animate-in zoom-in-95">
+                        {tag}
+                        <button onClick={() => handleRemoveTag(tag)} className="ml-2 hover:text-rose-500 transition-colors">
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                    {(!uploadingMedia.tags || uploadingMedia.tags.length === 0) && (
+                      <span className="text-[10px] text-slate-300 italic">暂无标签...</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-10 py-8 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+            <button 
+              onClick={() => setUploadingMedia(null)}
+              className="px-8 py-3 text-slate-500 font-black text-sm hover:text-slate-800 transition-colors mr-4"
+            >
+              取消
+            </button>
+            <button 
+              onClick={handleSaveMedia}
+              disabled={!uploadingMedia.name}
+              className={`px-12 py-3.5 rounded-2xl font-black text-sm shadow-xl transition-all active:scale-95 flex items-center ${
+                uploadingMedia.name ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              <Save size={18} className="mr-2" /> 确认上传并发布
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-row min-h-[calc(100vh-160px)] pb-20">
@@ -446,83 +754,9 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
         {activeTab === '现场提问记录' && renderInquiries()}
-        {activeTab === '数字化存证' && renderDigitalEvidence()}
+        {activeTab === '多媒体资料库' && renderMediaLibrary()}
         {activeTab === '用户权限管理' && renderUserManagement()}
-        {activeTab === '邮件通知中心' && renderNotificationCenter()}
       </div>
-
-      {/* 数字化存证详情 Modal (修复查看功能) */}
-      {viewingRecord && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in">
-           <div className="bg-white w-full max-w-4xl h-[85vh] rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20">
-              <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
-                <div className="flex items-center space-x-5">
-                   <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner"><History size={28}/></div>
-                   <div><h3 className="text-xl font-black text-slate-900">数字化存证审计</h3><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">流水号: {viewingRecord.id.toUpperCase()} · 证据链完整</p></div>
-                </div>
-                <button onClick={() => setViewingRecord(null)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all"><X size={24}/></button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-10 space-y-10 scrollbar-hide bg-slate-50/30">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="space-y-6">
-                       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 flex items-center"><Cpu size={12} className="mr-2"/> 资产与执行信息</h4>
-                          <div className="space-y-4">
-                             <div className="flex justify-between"><span className="text-[10px] text-slate-400 font-black">执行工程师</span><span className="text-xs font-black text-slate-800">{users.find(u => u.id === viewingRecord.engineerId)?.name}</span></div>
-                             <div className="flex justify-between"><span className="text-[10px] text-slate-400 font-black">设备型号</span><span className="text-xs font-black text-slate-800">{MOCK_DEVICES.find(d => d.id === MOCK_GUIDES.find(g => g.id === viewingRecord.guideId)?.deviceId)?.model}</span></div>
-                             <div className="flex justify-between"><span className="text-[10px] text-slate-400 font-black">开始时间</span><span className="text-[10px] font-mono text-slate-800">{new Date(viewingRecord.startTime).toLocaleString()}</span></div>
-                             <div className="flex justify-between"><span className="text-[10px] text-slate-400 font-black">完成时间</span><span className="text-[10px] font-mono text-slate-800">{viewingRecord.endTime ? new Date(viewingRecord.endTime).toLocaleString() : '处理中'}</span></div>
-                             <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-                                <span className="text-[10px] text-slate-400 font-black">提交触发源</span>
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                                  viewingRecord.submissionSource === 'PASS' 
-                                    ? 'bg-blue-50 text-blue-600 border border-blue-100' 
-                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
-                                }`}>
-                                  {viewingRecord.submissionSource || 'N/A'}
-                                </span>
-                             </div>
-                             {viewingRecord.context && (
-                               <div className="pt-2 space-y-2 border-t border-slate-50">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-400 font-black">最后执行步骤</span>
-                                    <span className="text-[10px] font-bold text-slate-700">{viewingRecord.context.lastStepId || '未记录'}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-400 font-black">故障反馈类型</span>
-                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${viewingRecord.context.isNewIssue ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                      {viewingRecord.context.isNewIssue ? 'SOP 未涵盖的新问题' : 'SOP 相关反馈'}
-                                    </span>
-                                  </div>
-                               </div>
-                             )}
-                          </div>
-                       </div>
-                       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 flex items-center"><FileText size={12} className="mr-2"/> 问题描述与处理</h4>
-                          <div className="space-y-4">
-                             <div><p className="text-[9px] text-slate-400 font-black uppercase">故障原因</p><p className="text-xs font-bold text-slate-700 mt-1 italic">"{viewingRecord.faultReason}"</p></div>
-                             <div><p className="text-[9px] text-slate-400 font-black uppercase">处理措施</p><p className="text-xs font-black text-slate-900 mt-1">{viewingRecord.treatment}</p></div>
-                          </div>
-                       </div>
-                    </div>
-                    <div className="space-y-6">
-                       <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 flex items-center"><Camera size={12} className="mr-2"/> 现场影像留存</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                             {viewingRecord.photos.map((p, idx) => (<img key={idx} src={p} className="w-full aspect-square object-cover rounded-2xl border border-slate-100" />))}
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-              <div className="px-10 py-6 border-t border-slate-100 flex items-center justify-between bg-white">
-                 <div className="flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"><BadgeCheck className="text-emerald-500" size={14}/><span>该记录已通过区块链指纹验证，不可篡改</span></div>
-                 <button onClick={() => setViewingRecord(null)} className="px-12 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all">关闭审计页</button>
-              </div>
-           </div>
-        </div>
-      )}
 
       {/* 提问详情 Modal */}
       {viewingInquiry && (
@@ -800,6 +1034,10 @@ const AdminDashboard: React.FC = () => {
            </div>
         </div>
       )}
+
+      {renderUploadModal()}
+      {renderMediaViewModal()}
+      {renderMediaEditModal()}
     </div>
   );
 };

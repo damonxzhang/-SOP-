@@ -148,6 +148,16 @@ export interface SOPImprovementFeedback {
   photos: string[];
   status: 'pending' | 'reviewed' | 'applied'; // 待审、已阅、已采纳（用于完善SOP）
   createdAt: string;
-  isFinishFeedback: boolean; // 是否是完工时的整体反馈
 }
 
+// 新增：多媒体资料库定义
+export interface MediaResource {
+  id: string;
+  name: string;
+  type: 'image' | 'video' | 'pdf' | 'doc';
+  url: string;
+  size: string;
+  tags: string[];
+  uploadTime: string;
+  uploader: string;
+}

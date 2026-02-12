@@ -1,5 +1,5 @@
 
-import { Role, Device, MaintenanceGuide, RepairRecord, User, UserPermissions, StepInquiry, RepairRequest } from './types';
+import { Role, Device, MaintenanceGuide, RepairRecord, User, UserPermissions, StepInquiry, RepairRequest, MediaResource } from './types';
 
 export const MOCK_REPAIR_REQUESTS: RepairRequest[] = [
   {
@@ -16,7 +16,41 @@ export const MOCK_REPAIR_REQUESTS: RepairRequest[] = [
     photos: [
       'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400',
       'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400'
-    ]
+    ],
+    createdAt: '2026-02-11 10:15'
+  }
+];
+
+export const MOCK_MEDIA_RESOURCES: MediaResource[] = [
+  {
+    id: 'm1',
+    name: 'NXT:2050i 传感器清洗教学视频.mp4',
+    type: 'video',
+    url: '#',
+    size: '45.2 MB',
+    tags: ['教学', 'NXT:2050i', '视频'],
+    uploadTime: '2026-01-20 14:30',
+    uploader: '李经理'
+  },
+  {
+    id: 'm2',
+    name: 'ASML 设备安全操作规程.pdf',
+    type: 'pdf',
+    url: '#',
+    size: '2.1 MB',
+    tags: ['安全', '规程', 'PDF'],
+    uploadTime: '2026-02-01 09:15',
+    uploader: '李经理'
+  },
+  {
+    id: 'm3',
+    name: '传感器污染典型案例图片.jpg',
+    type: 'image',
+    url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400',
+    size: '1.4 MB',
+    tags: ['案例', '图片', '传感器'],
+    uploadTime: '2026-02-10 16:45',
+    uploader: '陈工程师'
   }
 ];
 
