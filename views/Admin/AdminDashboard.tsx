@@ -685,6 +685,12 @@ const AdminDashboard: React.FC = () => {
                            <div className="flex items-center space-x-4">
                              <span className="w-8 h-8 bg-slate-900 text-white text-xs font-black rounded-full flex items-center justify-center">{idx + 1}</span>
                              <input className="flex-1 p-2 border-b-2 border-slate-100 outline-none font-black text-sm focus:border-blue-600 transition-colors" value={step.title} onChange={e => { const newSteps = [...editingGuide.steps]; newSteps[idx].title = e.target.value; setEditingGuide({...editingGuide, steps: newSteps}); }} />
+                             {step.historyRepairCount !== undefined && (
+                               <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl">
+                                 <History size={12} className="text-slate-400" />
+                                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">历史使用: {step.historyRepairCount} 次</span>
+                               </div>
+                             )}
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div className="space-y-1">
