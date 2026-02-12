@@ -43,6 +43,29 @@ const EngineerApp: React.FC = () => {
   const [viewingRequest, setViewingRequest] = useState<any>(null); // 新增：查看中的报修申请
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [alarmSearchQuery, setAlarmSearchQuery] = useState(''); // 新增：报警搜索关键词
+
+  // 监听进入 ALARM_SELECT 步骤，并根据是否有选中的报修申请自动填入搜索关键词
+  useEffect(() => {
+    if (step === 'ALARM_SELECT') {
+      if (viewingRequest) {
+        // 从报修申请关联的 MOCK_GUIDES 中找到对应的 scope (维修类型)
+        const guide = MOCK_GUIDES.find(g => g.deviceId === viewingRequest.deviceId && g.faultCode === viewingRequest.faultCode);
+        if (guide?.scope) {
+          setAlarmSearchQuery(guide.scope);
+        }
+      } else if (selectedDevice) {
+        // 如果没有特定的报修申请，但识别到了设备（如通过“跳过模拟识别”或正常扫描），则默认填入该设备的一个维修类型
+        const firstGuide = MOCK_GUIDES.find(g => g.deviceId === selectedDevice.id);
+        if (firstGuide?.scope) {
+          setAlarmSearchQuery(firstGuide.scope);
+        }
+      }
+    } else if (step === 'SCAN') {
+      // 重置搜索关键词
+      setAlarmSearchQuery('');
+    }
+  }, [step, viewingRequest, selectedDevice]);
+
   const [showAllAlarms, setShowAllAlarms] = useState(false); // 新增：是否显示全部报警代码
 
   // 模拟扫码识别过程
