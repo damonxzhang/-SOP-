@@ -42,6 +42,8 @@ const EngineerApp: React.FC = () => {
   const [isNewIssue, setIsNewIssue] = useState(false); // 新增：是否为新问题的勾选状态
   const [viewingRequest, setViewingRequest] = useState<any>(null); // 新增：查看中的报修申请
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [alarmSearchQuery, setAlarmSearchQuery] = useState(''); // 新增：报警搜索关键词
+  const [showAllAlarms, setShowAllAlarms] = useState(false); // 新增：是否显示全部报警代码
 
   // 模拟扫码识别过程
   useEffect(() => {
@@ -68,10 +70,31 @@ const EngineerApp: React.FC = () => {
 
   const availableAlarms = useMemo(() => {
     if (!selectedDevice) return [];
-    return MOCK_GUIDES
-      .filter(g => g.deviceId === selectedDevice.id)
-      .sort((a, b) => (b.totalOccurrenceCount || 0) - (a.totalOccurrenceCount || 0));
-  }, [selectedDevice]);
+    let baseList = MOCK_GUIDES
+      .filter(g => g.deviceId === selectedDevice.id);
+    
+    if (alarmSearchQuery.trim()) {
+      const query = alarmSearchQuery.toLowerCase();
+      baseList = baseList.filter(g => 
+        g.faultCode.toLowerCase().includes(query) || 
+        g.faultCategory.toLowerCase().includes(query) ||
+        g.scope.toLowerCase().includes(query)
+      );
+    }
+    
+    return baseList.sort((a, b) => (b.totalOccurrenceCount || 0) - (a.totalOccurrenceCount || 0));
+  }, [selectedDevice, alarmSearchQuery]);
+
+  // 分类报警代码（基于维修类型/Scope）
+  const groupedAlarms = useMemo(() => {
+    const groups: { [key: string]: MaintenanceGuide[] } = {};
+    availableAlarms.forEach(alarm => {
+      const scope = alarm.scope || '其他';
+      if (!groups[scope]) groups[scope] = [];
+      groups[scope].push(alarm);
+    });
+    return groups;
+  }, [availableAlarms]);
 
   const handleInquiryPhoto = () => {
     // 模拟拍照
@@ -205,48 +228,71 @@ const EngineerApp: React.FC = () => {
                 </div>
              </div>
              
-             <div className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
-                      <AlertTriangle size={12} className="mr-1.5 text-amber-500" /> 选择当前报警代码
-                   </h4>
+             <div className="space-y-6">
+                <div className="flex flex-col space-y-3">
+                   <div className="flex items-center justify-between px-1">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
+                         <AlertTriangle size={12} className="mr-1.5 text-amber-500" /> 选择当前报警代码
+                      </h4>
+                   </div>
+                   {/* 搜索框 */}
+                   <div className="relative">
+                      <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                         <Search size={14} className="text-slate-400" />
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="搜索报警代码、维修类型或故障现象..." 
+                        value={alarmSearchQuery}
+                        onChange={(e) => setAlarmSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-slate-100 text-[11px] font-bold outline-none focus:border-blue-400 transition-all shadow-sm"
+                      />
+                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-3">
-                   {availableAlarms.length > 0 ? (
-                      availableAlarms.map((guide) => (
-                         <button 
-                            key={guide.id} 
-                            onClick={() => { 
-                               setSelectedGuide(guide); 
-                               setActiveGuideStepIdx(0); 
-                               setShowHistoryOverlay(false); // 直接进入步骤，不显示历史
-                               setStep('GUIDE'); 
-                            }} 
-                            className="flex flex-col p-5 bg-white rounded-3xl border border-slate-100 hover:border-blue-400 hover:bg-blue-50 transition-all shadow-sm group text-left relative overflow-hidden"
-                         >
-                            <div className="flex justify-between items-start mb-2">
-                               <div className="flex items-center space-x-2">
-                                  <span className="text-[11px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                                     {guide.faultCode}
-                                  </span>
-                               </div>
-                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                                  {guide.scope}
-                               </span>
+                <div className="space-y-8">
+                   {Object.keys(groupedAlarms).length > 0 ? (
+                      Object.entries(groupedAlarms).map(([scope, alarms]) => (
+                         <div key={scope} className="space-y-3">
+                            <div className="flex items-center space-x-2 px-1">
+                               <div className="w-1 h-3 bg-blue-600 rounded-full"></div>
+                               <h5 className="text-[11px] font-black text-slate-900 uppercase tracking-wider">{scope}</h5>
+                               <span className="text-[9px] font-black text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100">{alarms.length}</span>
                             </div>
-                            <h3 className="text-sm font-black text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
-                               {guide.faultCategory}
-                            </h3>
-                            <p className="text-[10px] text-slate-400 line-clamp-1 italic font-medium">
-                               {guide.faultPhenomenon}
-                            </p>
-                            <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <div className="p-2 bg-blue-600 text-white rounded-full shadow-lg">
-                                  <ChevronRight size={14} />
-                               </div>
+                            <div className="grid grid-cols-1 gap-3">
+                               {alarms.map((guide) => (
+                                  <button 
+                                     key={guide.id} 
+                                     onClick={() => { 
+                                        setSelectedGuide(guide); 
+                                        setActiveGuideStepIdx(0); 
+                                        setShowHistoryOverlay(false); 
+                                        setStep('GUIDE'); 
+                                     }} 
+                                     className="flex flex-col p-5 bg-white rounded-3xl border border-slate-100 hover:border-blue-400 hover:bg-blue-50 transition-all shadow-sm group text-left relative overflow-hidden"
+                                  >
+                                     <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center space-x-2">
+                                           <span className="text-[11px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                                              {guide.faultCode}
+                                           </span>
+                                        </div>
+                                     </div>
+                                     <h3 className="text-sm font-black text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                                        {guide.faultCategory}
+                                     </h3>
+                                     <p className="text-[10px] text-slate-400 line-clamp-1 italic font-medium">
+                                        {guide.faultPhenomenon}
+                                     </p>
+                                     <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="p-2 bg-blue-600 text-white rounded-full shadow-lg">
+                                           <ChevronRight size={14} />
+                                        </div>
+                                     </div>
+                                  </button>
+                               ))}
                             </div>
-                         </button>
+                         </div>
                       ))
                    ) : (
                       <div className="p-10 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 text-center space-y-3">
@@ -254,11 +300,68 @@ const EngineerApp: React.FC = () => {
                             <Search size={24} className="text-slate-300" />
                          </div>
                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            该机台暂无关联的报警代码
+                            未找到匹配的报警代码
                          </p>
                       </div>
-                      )}
+                   )}
+
+                   {/* 查看全部报警按钮 */}
+                   <button 
+                     onClick={() => setShowAllAlarms(true)}
+                     className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-200 active:scale-95 transition-all flex items-center justify-center space-x-2"
+                   >
+                      <Layers size={14} />
+                      <span>查看全部报警代码列表</span>
+                   </button>
                 </div>
+
+                {/* 全部报警代码弹窗 */}
+                {showAllAlarms && (
+                   <div className="fixed inset-0 z-[250] bg-slate-900/60 backdrop-blur-md flex items-end animate-in fade-in duration-300">
+                      <div className="w-full bg-white rounded-t-[3rem] shadow-2xl flex flex-col h-[90%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden">
+                         <div className="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
+                            <div className="flex items-center space-x-4">
+                               <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                                  <Layers size={24}/>
+                               </div>
+                               <div>
+                                  <h3 className="text-lg font-black text-slate-900">全部报警代码库</h3>
+                                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">机台: {selectedDevice?.model} · 共 {MOCK_GUIDES.filter(g => g.deviceId === selectedDevice?.id).length} 条</p>
+                               </div>
+                            </div>
+                            <button onClick={() => setShowAllAlarms(false)} className="p-3 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-transform">
+                               <X size={24}/>
+                            </button>
+                         </div>
+                         <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+                            <div className="grid grid-cols-1 gap-3 pb-10">
+                               {MOCK_GUIDES.filter(g => g.deviceId === selectedDevice?.id).map(guide => (
+                                  <div 
+                                    key={guide.id}
+                                    onClick={() => {
+                                       setSelectedGuide(guide);
+                                       setActiveGuideStepIdx(0);
+                                       setShowHistoryOverlay(false);
+                                       setStep('GUIDE');
+                                       setShowAllAlarms(false);
+                                    }}
+                                    className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-between group active:bg-blue-50 transition-all cursor-pointer"
+                                  >
+                                     <div className="flex items-center space-x-4">
+                                        <span className="text-[11px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg uppercase tracking-wider">{guide.faultCode}</span>
+                                        <div>
+                                           <h4 className="text-sm font-black text-slate-800">{guide.faultCategory}</h4>
+                                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{guide.scope}</span>
+                                        </div>
+                                     </div>
+                                     <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                                  </div>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                )}
 
                 {/* 新增：待处理维修申请模块 */}
                 <div className="pt-4 pb-8 border-t border-slate-100 mt-6">
