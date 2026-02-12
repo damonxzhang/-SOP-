@@ -436,18 +436,28 @@ const EngineerApp: React.FC = () => {
                    {sortedSteps.map((s, idx) => (
                       <div 
                         key={s.id}
-                        className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm relative group"
+                        onClick={() => {
+                           setActiveGuideStepIdx(idx);
+                           setShowHistoryOverlay(false); // 直接跳转不显示历史浮层
+                           setStep('GUIDE');
+                        }}
+                        className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm relative group cursor-pointer active:scale-[0.98] transition-all hover:border-blue-300"
                       >
                          <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg uppercase tracking-wider">步骤 {idx + 1}</span>
-                            {s.historyRepairCount !== undefined && (
-                               <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100">
-                                  <History size={10} />
-                                  <span className="text-[9px] font-black uppercase tracking-tighter">反馈次数: {s.historyRepairCount}</span>
+                            <div className="flex items-center space-x-2">
+                               {s.historyRepairCount !== undefined && (
+                                  <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100">
+                                     <History size={10} />
+                                     <span className="text-[9px] font-black uppercase tracking-tighter">反馈次数: {s.historyRepairCount}</span>
+                                  </div>
+                               )}
+                               <div className="p-1 bg-blue-50 text-blue-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Play size={10} fill="currentColor" />
                                </div>
-                            )}
+                            </div>
                          </div>
-                         <h3 className="text-sm font-black text-slate-800 leading-snug">{s.title}</h3>
+                         <h3 className="text-sm font-black text-slate-800 leading-snug group-hover:text-blue-600 transition-colors">{s.title}</h3>
                          <p className="text-[10px] text-slate-400 mt-2 line-clamp-2 italic">{s.description}</p>
                          <div className="mt-4 flex items-center space-x-2">
                             <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{s.stage}</span>
@@ -475,7 +485,7 @@ const EngineerApp: React.FC = () => {
     }
 
     if (step === 'GUIDE' && selectedGuide) {
-      const currentStep = selectedGuide.steps[activeGuideStepIdx];
+      const currentStep = sortedSteps[activeGuideStepIdx];
       return (
         <div className="flex flex-col h-full animate-in fade-in duration-500 relative">
            {/* 报警历史浮层 - 进入时显示 */}
