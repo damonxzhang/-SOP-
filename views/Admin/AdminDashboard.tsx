@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BookOpen, Plus, LayoutDashboard, History, 
   Search, X, CheckCircle2, CheckCircle, XCircle, Layers, Trash2, Edit3, Save,
@@ -24,6 +24,34 @@ const AdminDashboard: React.FC = () => {
   const [guides, setGuides] = useState<MaintenanceGuide[]>(MOCK_GUIDES);
   const [records] = useState<RepairRecord[]>(MOCK_RECORDS);
   const [users, setUsers] = useState<User[]>(ALL_USERS);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoadingUsers(true);
+      try {
+        const response = await fetch('http://212.64.29.230:8080/backend/sop/list');
+        const result = await response.json();
+        if (result.code === 200 && Array.isArray(result.data)) {
+          // 映射后端返回的角色字符串为前端的 Role 枚举值
+          const mappedUsers = result.data.map((u: any) => ({
+            ...u,
+            role: u.role === 'Role.ADMIN' ? Role.ADMIN : 
+                  u.role === 'Role.SENIOR_ENGINEER' ? Role.SENIOR_ENGINEER : 
+                  u.role === 'Role.OUTSOURCED_ENGINEER' ? Role.OUTSOURCED_ENGINEER : 
+                  Role.JUNIOR_ENGINEER
+          }));
+          setUsers(mappedUsers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user list:', error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
   const [inquiries, setInquiries] = useState<StepInquiry[]>(MOCK_INQUIRIES);
   
   const [editingGuide, setEditingGuide] = useState<MaintenanceGuide | null>(null);
@@ -201,7 +229,11 @@ const AdminDashboard: React.FC = () => {
                <span className="px-4 py-1.5 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black border border-slate-100 uppercase tracking-widest">活跃账户: {users.filter(u => u.status === 'active').length}</span>
                <span className="px-4 py-1.5 bg-rose-50 text-rose-500 rounded-full text-[10px] font-black border border-rose-100 uppercase tracking-widest">已停用: {users.filter(u => u.status === 'disabled').length}</span>
              </div>
-             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16}/><input placeholder="输入姓名或工号快速搜索..." className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 w-64 shadow-inner"/></div>
+             <div className="relative">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
+               <input placeholder="输入姓名或工号快速搜索..." className="pl-10 pr-10 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 w-64 shadow-inner"/>
+               {isLoadingUsers && <RefreshCcw className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 animate-spin" size={14}/>}
+             </div>
           </div>
           <div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead className="bg-slate-50/50"><tr><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">工程师基本面</th><th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">角色等级</th><th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">最后登录</th><th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">状态</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">管理操作</th></tr></thead><tbody className="divide-y divide-slate-100">{users.map(u => (<tr key={u.id} className="hover:bg-slate-50/50 transition-colors group"><td className="px-8 py-6"><div className="flex items-center space-x-3"><img src={u.avatar} className="w-10 h-10 rounded-xl bg-slate-100" alt=""/><div><p className="text-sm font-black text-slate-900">{u.name}</p><p className="text-[10px] text-slate-400 font-mono tracking-tighter uppercase">{u.employeeId}</p></div></div></td><td className="px-4 py-6"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${u.role === Role.ADMIN ? 'bg-rose-50 text-rose-600' : u.role === Role.SENIOR_ENGINEER ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>{u.role.replace('_', ' ')}</span></td><td className="px-4 py-6 text-[10px] text-slate-500 font-mono">{u.lastLogin || '--'}</td><td className="px-4 py-6">{u.status === 'active' ? <span className="text-emerald-600 flex items-center text-[10px] font-black uppercase"><UserCheck size={12} className="mr-1"/> 正常</span> : <span className="text-slate-400 flex items-center text-[10px] font-black uppercase"><UserMinus size={12} className="mr-1"/> 已冻结</span>}</td><td className="px-8 py-6 text-right space-x-2"><button onClick={() => setEditingUser(u)} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-600 transition-all shadow-sm active:scale-90"><Settings size={16}/></button></td></tr>))}</tbody></table></div>
        </div>
