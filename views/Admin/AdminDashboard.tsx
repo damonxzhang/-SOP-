@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BookOpen, Plus, LayoutDashboard, History, 
   Search, X, CheckCircle2, CheckCircle, XCircle, Layers, Trash2, Edit3, Save,
-  Mail, ShieldAlert, Users, HardDrive, 
+  Mail, ShieldAlert, Users, HardDrive, Database,
   ShieldCheck, Eye, Clock, AlertTriangle, TrendingUp, BarChart3, Target, PieChart, UploadCloud, FileText,
   Activity, FileVideo, FileImage, FileDown, ChevronRight, Download, Filter, BadgeCheck, Zap, Info, Shield,
   Cpu, Settings, UserPlus, UserMinus, UserCheck, Lock, Unlock, Send, Bell, MailCheck, ExternalLink, RefreshCcw,
@@ -61,6 +61,11 @@ const AdminDashboard: React.FC = () => {
   const [viewingInquiry, setViewingInquiry] = useState<StepInquiry | null>(null);
   const [viewingMedia, setViewingMedia] = useState<MediaResource | null>(null);
   const [editingMedia, setEditingMedia] = useState<MediaResource | null>(null);
+  const [mediaSelectionSearch, setMediaSelectionSearch] = useState('');
+  const [selectingMediaForStep, setSelectingMediaForStep] = useState<{
+    stepIndex: number;
+    type: 'image' | 'video' | 'pdf' | 'doc';
+  } | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState<Partial<MediaResource> | null>(null);
   const [newTag, setNewTag] = useState('');
 
@@ -355,6 +360,112 @@ const AdminDashboard: React.FC = () => {
               <p className="text-sm font-black uppercase tracking-widest">未找到匹配的资料</p>
             </div>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMediaSelectionModal = () => {
+    if (!selectingMediaForStep || !editingGuide) return null;
+
+    const filteredResources = mediaResources.filter(r => {
+      // 首先根据类型过滤
+      let typeMatch = true;
+      if (selectingMediaForStep.type === 'image') typeMatch = r.type === 'image';
+      else if (selectingMediaForStep.type === 'video') typeMatch = r.type === 'video';
+      else if (selectingMediaForStep.type === 'pdf') typeMatch = r.type === 'pdf' || r.type === 'doc';
+
+      // 然后根据搜索词过滤（匹配名称或标签）
+      const searchLower = mediaSelectionSearch.toLowerCase();
+      const searchMatch = !mediaSelectionSearch || 
+        r.name.toLowerCase().includes(searchLower) || 
+        r.tags.some(tag => tag.toLowerCase().includes(searchLower));
+
+      return typeMatch && searchMatch;
+    });
+
+    const handleSelect = (resource: MediaResource) => {
+      const newSteps = [...editingGuide.steps];
+      const idx = selectingMediaForStep.stepIndex;
+      if (selectingMediaForStep.type === 'image') newSteps[idx].imageUrl = resource.url;
+      if (selectingMediaForStep.type === 'video') newSteps[idx].videoUrl = resource.url;
+      if (selectingMediaForStep.type === 'pdf') newSteps[idx].pdfUrl = resource.url;
+      
+      setEditingGuide({ ...editingGuide, steps: newSteps });
+      setSelectingMediaForStep(null);
+      setMediaSelectionSearch(''); // 清除搜索词
+    };
+
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in">
+        <div className="bg-white w-full max-w-4xl h-[80vh] rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20">
+          <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+            <div className="flex items-center space-x-5">
+              <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner rotate-3">
+                <Database size={28}/>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">从数字化资源库选择</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  正在为第 {selectingMediaForStep.stepIndex + 1} 步选择 {selectingMediaForStep.type === 'image' ? '图片' : selectingMediaForStep.type === 'video' ? '视频' : '文档'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex-1 max-w-sm mx-8 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+              <input 
+                type="text"
+                placeholder="搜索资源名称或标签..."
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                value={mediaSelectionSearch}
+                onChange={(e) => setMediaSelectionSearch(e.target.value)}
+              />
+            </div>
+
+            <button onClick={() => { setSelectingMediaForStep(null); setMediaSelectionSearch(''); }} className="p-3 hover:bg-slate-100 rounded-2xl transition-all"><X size={24}/></button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30">
+            {filteredResources.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                {filteredResources.map(resource => (
+                  <div 
+                    key={resource.id} 
+                    onClick={() => handleSelect(resource)}
+                    className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+                  >
+                    <div className="aspect-video rounded-2xl overflow-hidden bg-slate-100 mb-4 flex items-center justify-center">
+                      {resource.type === 'image' ? (
+                        <img src={resource.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                      ) : resource.type === 'video' ? (
+                        <FileVideo size={32} className="text-slate-300" />
+                      ) : (
+                        <FileText size={32} className="text-slate-300" />
+                      )}
+                    </div>
+                    <h4 className="text-xs font-black text-slate-800 truncate mb-1">{resource.name}</h4>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">{resource.size}</span>
+                      <div className="flex gap-1">
+                        {resource.tags.slice(0, 1).map(t => (
+                          <span key={t} className="text-[8px] px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded-md border border-slate-100">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/5 transition-colors flex items-center justify-center">
+                      <div className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">选择此项</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                <Search size={48} className="mb-4 opacity-20" />
+                <p className="text-sm font-black uppercase tracking-widest">资源库中暂无匹配的资料</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -969,16 +1080,29 @@ const AdminDashboard: React.FC = () => {
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center"><FileImage size={12} className="mr-1 text-blue-500"/> 图片资源</label>
                                <div className="relative group/media">
                                  {step.imageUrl ? (
-                                   <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 shadow-sm">
-                                     <img src={step.imageUrl} className="w-full h-full object-cover" alt="" />
-                                     <button onClick={() => { const newSteps = [...editingGuide.steps]; newSteps[idx].imageUrl = ''; setEditingGuide({...editingGuide, steps: newSteps}); }} className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 size={20}/></button>
-                                   </div>
-                                 ) : (
-                                   <button onClick={() => { const url = prompt('请输入图片 URL (模拟上传):', 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&auto=format&fit=crop'); if(url) { const newSteps = [...editingGuide.steps]; newSteps[idx].imageUrl = url; setEditingGuide({...editingGuide, steps: newSteps}); } }} className="w-full aspect-video border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-300 hover:border-blue-200 hover:text-blue-400 transition-all bg-slate-50/50">
-                                     <UploadCloud size={24} className="mb-2" />
-                                     <span className="text-[10px] font-bold">上传图片</span>
-                                   </button>
-                                 )}
+                                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+                                      <img src={step.imageUrl} className="w-full h-full object-cover" alt="" />
+                                      <button onClick={() => { const newSteps = [...editingGuide.steps]; newSteps[idx].imageUrl = ''; setEditingGuide({...editingGuide, steps: newSteps}); }} className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 size={20}/></button>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full aspect-video border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center bg-slate-50/50 space-y-3">
+                                      <button 
+                                        onClick={() => { const url = prompt('请输入图片 URL (模拟上传):', 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&auto=format&fit=crop'); if(url) { const newSteps = [...editingGuide.steps]; newSteps[idx].imageUrl = url; setEditingGuide({...editingGuide, steps: newSteps}); } }}
+                                        className="flex flex-col items-center justify-center text-slate-300 hover:text-blue-600 transition-all transform hover:scale-105"
+                                      >
+                                        <UploadCloud size={20} className="mb-1" />
+                                        <span className="text-[9px] font-black uppercase">本地上传</span>
+                                      </button>
+                                      <div className="w-10 h-[1px] bg-slate-100" />
+                                      <button 
+                                        onClick={() => setSelectingMediaForStep({ stepIndex: idx, type: 'image' })}
+                                        className="flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 transition-all transform hover:scale-105"
+                                      >
+                                        <Database size={20} className="mb-1" />
+                                        <span className="text-[9px] font-black uppercase">资源库选择</span>
+                                      </button>
+                                    </div>
+                                  )}
                                </div>
                              </div>
 
@@ -986,17 +1110,30 @@ const AdminDashboard: React.FC = () => {
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center"><FileVideo size={12} className="mr-1 text-indigo-500"/> 视频指导</label>
                                <div className="relative group/media">
                                  {step.videoUrl ? (
-                                   <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-900 flex items-center justify-center">
-                                     <FileVideo size={32} className="text-white/20" />
-                                     <div className="absolute bottom-2 left-2 right-2 text-[8px] text-white font-mono truncate px-2 py-1 bg-black/40 rounded">{step.videoUrl}</div>
-                                     <button onClick={() => { const newSteps = [...editingGuide.steps]; newSteps[idx].videoUrl = ''; setEditingGuide({...editingGuide, steps: newSteps}); }} className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 size={20}/></button>
-                                   </div>
-                                 ) : (
-                                   <button onClick={() => { const url = prompt('请输入视频 URL (模拟上传):', 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4'); if(url) { const newSteps = [...editingGuide.steps]; newSteps[idx].videoUrl = url; setEditingGuide({...editingGuide, steps: newSteps}); } }} className="w-full aspect-video border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-300 hover:border-indigo-200 hover:text-indigo-400 transition-all bg-slate-50/50">
-                                     <UploadCloud size={24} className="mb-2" />
-                                     <span className="text-[10px] font-bold">上传视频</span>
-                                   </button>
-                                 )}
+                                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-900 flex items-center justify-center">
+                                      <FileVideo size={32} className="text-white/20" />
+                                      <div className="absolute bottom-2 left-2 right-2 text-[8px] text-white font-mono truncate px-2 py-1 bg-black/40 rounded">{step.videoUrl}</div>
+                                      <button onClick={() => { const newSteps = [...editingGuide.steps]; newSteps[idx].videoUrl = ''; setEditingGuide({...editingGuide, steps: newSteps}); }} className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 size={20}/></button>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full aspect-video border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center bg-slate-50/50 space-y-3">
+                                      <button 
+                                        onClick={() => { const url = prompt('请输入视频 URL (模拟上传):', 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4'); if(url) { const newSteps = [...editingGuide.steps]; newSteps[idx].videoUrl = url; setEditingGuide({...editingGuide, steps: newSteps}); } }}
+                                        className="flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 transition-all transform hover:scale-105"
+                                      >
+                                        <UploadCloud size={20} className="mb-1" />
+                                        <span className="text-[9px] font-black uppercase">本地上传</span>
+                                      </button>
+                                      <div className="w-10 h-[1px] bg-slate-100" />
+                                      <button 
+                                        onClick={() => setSelectingMediaForStep({ stepIndex: idx, type: 'video' })}
+                                        className="flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 transition-all transform hover:scale-105"
+                                      >
+                                        <Database size={20} className="mb-1" />
+                                        <span className="text-[9px] font-black uppercase">资源库选择</span>
+                                      </button>
+                                    </div>
+                                  )}
                                </div>
                              </div>
 
@@ -1004,17 +1141,30 @@ const AdminDashboard: React.FC = () => {
                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center"><FileText size={12} className="mr-1 text-rose-500"/> PDF 文档</label>
                                <div className="relative group/media">
                                  {step.pdfUrl ? (
-                                   <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-rose-50 flex flex-col items-center justify-center p-4">
-                                     <FileDown size={32} className="text-rose-200 mb-2" />
-                                     <div className="text-[8px] text-rose-600 font-black truncate w-full text-center">ATTACHED_DOC.PDF</div>
-                                     <button onClick={() => { const newSteps = [...editingGuide.steps]; newSteps[idx].pdfUrl = ''; setEditingGuide({...editingGuide, steps: newSteps}); }} className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 size={20}/></button>
-                                   </div>
-                                 ) : (
-                                   <button onClick={() => { const url = prompt('请输入 PDF URL (模拟上传):', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'); if(url) { const newSteps = [...editingGuide.steps]; newSteps[idx].pdfUrl = url; setEditingGuide({...editingGuide, steps: newSteps}); } }} className="w-full aspect-video border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-300 hover:border-rose-200 hover:text-rose-400 transition-all bg-slate-50/50">
-                                     <UploadCloud size={24} className="mb-2" />
-                                     <span className="text-[10px] font-bold">上传 PDF</span>
-                                   </button>
-                                 )}
+                                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-rose-50 flex flex-col items-center justify-center p-4">
+                                      <FileDown size={32} className="text-rose-200 mb-2" />
+                                      <div className="text-[8px] text-rose-600 font-black truncate w-full text-center">ATTACHED_DOC.PDF</div>
+                                      <button onClick={() => { const newSteps = [...editingGuide.steps]; newSteps[idx].pdfUrl = ''; setEditingGuide({...editingGuide, steps: newSteps}); }} className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 size={20}/></button>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full aspect-video border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center bg-slate-50/50 space-y-3">
+                                      <button 
+                                        onClick={() => { const url = prompt('请输入 PDF URL (模拟上传):', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'); if(url) { const newSteps = [...editingGuide.steps]; newSteps[idx].pdfUrl = url; setEditingGuide({...editingGuide, steps: newSteps}); } }}
+                                        className="flex flex-col items-center justify-center text-slate-300 hover:text-rose-600 transition-all transform hover:scale-105"
+                                      >
+                                        <UploadCloud size={20} className="mb-1" />
+                                        <span className="text-[9px] font-black uppercase">本地上传</span>
+                                      </button>
+                                      <div className="w-10 h-[1px] bg-slate-100" />
+                                      <button 
+                                        onClick={() => setSelectingMediaForStep({ stepIndex: idx, type: 'pdf' })}
+                                        className="flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 transition-all transform hover:scale-105"
+                                      >
+                                        <Database size={20} className="mb-1" />
+                                        <span className="text-[9px] font-black uppercase">资源库选择</span>
+                                      </button>
+                                    </div>
+                                  )}
                                </div>
                              </div>
                            </div>
@@ -1038,6 +1188,7 @@ const AdminDashboard: React.FC = () => {
       {renderUploadModal()}
       {renderMediaViewModal()}
       {renderMediaEditModal()}
+      {renderMediaSelectionModal()}
     </div>
   );
 };
