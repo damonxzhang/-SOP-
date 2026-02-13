@@ -5,7 +5,7 @@ import {
   Send, Image as ImageIcon, Video, ShieldCheck, ScanLine, Info, Tag, Search, AlertCircle, 
   FileSearch, AlertTriangle, Hammer, BookOpen, ExternalLink, Maximize2, History, Calendar, ClipboardCheck, ClipboardList, Camera, MessageSquare, CheckCircle2, Clock, BadgeAlert, Layers, Home, User as UserIcon, LogOut, Radio
 } from 'lucide-react';
-import { MOCK_DEVICES, MOCK_GUIDES, MOCK_USER, MOCK_RECORDS, ALL_USERS, MOCK_REPAIR_REQUESTS } from '../../constants';
+import { MOCK_DEVICES, MOCK_GUIDES, MOCK_USER, MOCK_RECORDS, ALL_USERS, MOCK_REPAIR_REQUESTS, MOCK_MEDIA_RESOURCES } from '../../constants';
 import { Device, MaintenanceGuide, GuideStep, RepairRecord } from '../../types';
 
 const EngineerApp: React.FC = () => {
@@ -319,7 +319,11 @@ const EngineerApp: React.FC = () => {
                 <button onClick={() => setStep('SCAN')} className="p-2 bg-slate-100 rounded-full text-slate-500"><ArrowLeft size={18}/></button>
                 <div className="flex-1">
                    <h2 className="text-sm font-black text-slate-900">已识别机台: {selectedDevice?.model}</h2>
-                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-tighter">SN: {selectedDevice?.sn}</p>
+                   <div className="flex items-center space-x-2">
+                      <p className="text-[10px] text-blue-600 font-bold uppercase tracking-tighter">SN: {selectedDevice?.sn}</p>
+                      <span className="text-[10px] text-slate-300">|</span>
+                      <p className="text-[10px] text-slate-400 font-mono">V 1.1.20260213.002</p>
+                   </div>
                 </div>
              </div>
              
@@ -347,7 +351,7 @@ const EngineerApp: React.FC = () => {
                 
                 <div className="space-y-8">
                    {Object.keys(groupedAlarms).length > 0 ? (
-                      Object.entries(groupedAlarms).map(([scope, alarms]) => (
+                      (Object.entries(groupedAlarms) as [string, MaintenanceGuide[]][]).map(([scope, alarms]) => (
                          <div key={scope} className="space-y-3">
                             <div className="flex items-center space-x-2 px-1">
                                <div className="w-1 h-3 bg-blue-600 rounded-full"></div>
@@ -595,7 +599,7 @@ const EngineerApp: React.FC = () => {
                 </div>
              </div>
 
-             <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide">
+             <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide pb-24">
                 <div className="bg-blue-50/50 p-5 rounded-[2rem] border border-blue-100/50 mb-2">
                    <div className="flex items-center space-x-3">
                       <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
@@ -643,7 +647,7 @@ const EngineerApp: React.FC = () => {
                 </div>
              </div>
 
-             <div className="pt-6 shrink-0">
+             <div className="pt-6 shrink-0 pb-20">
                 <button 
                    onClick={() => {
                       setActiveGuideStepIdx(0);
@@ -823,43 +827,85 @@ const EngineerApp: React.FC = () => {
                       <h3 className="text-base font-black text-slate-900 leading-tight">{currentStep.title}</h3>
                       
                       {/* 多媒体内容展示 */}
-                      {(currentStep.imageUrl || currentStep.videoUrl || currentStep.pdfUrl || currentStep.mediaUrl) && (
+                      {(currentStep.imageUrl || currentStep.videoUrl || currentStep.pdfUrl || currentStep.mediaUrl || 
+                        (currentStep.imageUrls && currentStep.imageUrls.length > 0) || 
+                        (currentStep.videoUrls && currentStep.videoUrls.length > 0) || 
+                        (currentStep.pdfUrls && currentStep.pdfUrls.length > 0)) && (
                         <div className="space-y-4">
-                           {currentStep.imageUrl && (
-                              <div className="relative rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 group">
-                                 <img src={currentStep.imageUrl} className="w-full aspect-video object-cover" alt="操作示意图" />
-                                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                                    <Maximize2 size={24} className="text-white"/>
-                                 </div>
-                              </div>
-                           )}
+                           {/* 图片展示 */}
+                           {(currentStep.imageUrls || (currentStep.imageUrl ? [currentStep.imageUrl] : [])).map((url, idx) => {
+                              const mediaResource = MOCK_MEDIA_RESOURCES.find(m => m.url === url);
+                              return (
+                                <div key={`img-${idx}`} className="space-y-2">
+                                   {mediaResource?.description && (
+                                      <div className="px-4 py-2 bg-indigo-50/50 border-l-4 border-indigo-400 rounded-r-xl">
+                                         <p className="text-[11px] font-bold text-indigo-700 leading-relaxed">
+                                            <span className="opacity-50 mr-1">#</span> {mediaResource.description}
+                                         </p>
+                                      </div>
+                                   )}
+                                   <div className="relative rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 group">
+                                      <img src={url} className="w-full aspect-video object-cover" alt={`操作示意图 ${idx + 1}`} />
+                                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                         <Maximize2 size={24} className="text-white"/>
+                                      </div>
+                                   </div>
+                                </div>
+                              );
+                           })}
                            
-                           {currentStep.videoUrl && (
-                              <div className="relative rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-black aspect-video group">
-                                 <video src={currentStep.videoUrl} className="w-full h-full object-contain" poster={currentStep.imageUrl} />
-                                 <button className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-all" onClick={(e) => { const video = e.currentTarget.previousElementSibling as HTMLVideoElement; if (video.paused) { video.play(); video.controls = true; (e.currentTarget as HTMLElement).style.display = 'none'; } }}>
-                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-2xl">
-                                       <PlayCircle size={32} className="text-blue-600 ml-1"/>
-                                    </div>
-                                 </button>
-                              </div>
-                           )}
+                           {/* 视频展示 */}
+                           {(currentStep.videoUrls || (currentStep.videoUrl ? [currentStep.videoUrl] : [])).map((url, idx) => {
+                              const mediaResource = MOCK_MEDIA_RESOURCES.find(m => m.url === url);
+                              return (
+                                <div key={`vid-${idx}`} className="space-y-2">
+                                   {mediaResource?.description && (
+                                      <div className="px-4 py-2 bg-indigo-50/50 border-l-4 border-indigo-400 rounded-r-xl">
+                                         <p className="text-[11px] font-bold text-indigo-700 leading-relaxed">
+                                            <span className="opacity-50 mr-1">#</span> {mediaResource.description}
+                                         </p>
+                                      </div>
+                                   )}
+                                   <div className="relative rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-black aspect-video group">
+                                      <video src={url} className="w-full h-full object-contain" poster={currentStep.imageUrl} />
+                                      <button className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-all" onClick={(e) => { const video = e.currentTarget.previousElementSibling as HTMLVideoElement; if (video.paused) { video.play(); video.controls = true; (e.currentTarget as HTMLElement).style.display = 'none'; } }}>
+                                         <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-2xl">
+                                            <PlayCircle size={32} className="text-blue-600 ml-1"/>
+                                         </div>
+                                      </button>
+                                   </div>
+                                </div>
+                              );
+                           })}
 
-                           {(currentStep.pdfUrl || (currentStep.mediaType === 'pdf' && currentStep.mediaUrl)) && (
-                              <div className="p-6 flex flex-col items-center justify-center space-y-4 bg-rose-50 border border-rose-100 rounded-[2rem]">
-                                 <div className="p-3 bg-white text-rose-500 rounded-2xl shadow-sm"><FileText size={24}/></div>
-                                 <div className="text-center">
-                                    <p className="text-[11px] font-black text-rose-900">关联技术参考手册</p>
-                                    <p className="text-[9px] text-rose-400 mt-1 uppercase font-bold tracking-tighter">Technical_Doc_Reference.pdf</p>
-                                 </div>
-                                 <button 
-                                    onClick={() => setPreviewPdfUrl(currentStep.pdfUrl || currentStep.mediaUrl!)} 
-                                    className="w-full py-3 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center shadow-lg shadow-rose-200 active:scale-95 transition-all"
-                                 >
-                                    <FileSearch size={14} className="mr-2"/> 在线查阅 PDF 文档
-                                 </button>
-                              </div>
-                           )}
+                           {/* PDF 展示 */}
+                           {(currentStep.pdfUrls || (currentStep.pdfUrl ? [currentStep.pdfUrl] : (currentStep.mediaType === 'pdf' && currentStep.mediaUrl ? [currentStep.mediaUrl] : []))).map((url, idx) => {
+                              const mediaResource = MOCK_MEDIA_RESOURCES.find(m => m.url === url);
+                              return (
+                                <div key={`pdf-${idx}`} className="space-y-2">
+                                   {mediaResource?.description && (
+                                      <div className="px-4 py-2 bg-indigo-50/50 border-l-4 border-indigo-400 rounded-r-xl">
+                                         <p className="text-[11px] font-bold text-indigo-700 leading-relaxed">
+                                            <span className="opacity-50 mr-1">#</span> {mediaResource.description}
+                                         </p>
+                                      </div>
+                                   )}
+                                   <div className="p-6 flex flex-col items-center justify-center space-y-4 bg-rose-50 border border-rose-100 rounded-[2rem]">
+                                      <div className="p-3 bg-white text-rose-500 rounded-2xl shadow-sm"><FileText size={24}/></div>
+                                      <div className="text-center">
+                                         <p className="text-[11px] font-black text-rose-900">关联技术参考手册 {idx + 1}</p>
+                                         <p className="text-[9px] text-rose-400 mt-1 uppercase font-bold tracking-tighter">Technical_Doc_Reference_{idx + 1}.pdf</p>
+                                      </div>
+                                      <button 
+                                         onClick={() => setPreviewPdfUrl(url)} 
+                                         className="w-full py-3 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center shadow-lg shadow-rose-200 active:scale-95 transition-all"
+                                      >
+                                         <FileSearch size={14} className="mr-2"/> 在线查阅 PDF 文档
+                                      </button>
+                                   </div>
+                                </div>
+                              );
+                           })}
                         </div>
                       )}
 
@@ -907,7 +953,7 @@ const EngineerApp: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="absolute bottom-6 left-0 right-0 px-4 pt-10 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent z-40 flex space-x-3">
+                <div className="absolute bottom-20 left-0 right-0 px-4 pt-10 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent z-40 flex space-x-3">
                    <button 
                       onClick={() => {
                          if (confirm("确定要结束本次维修流程并提交执行记录吗？")) {
@@ -1039,7 +1085,7 @@ const EngineerApp: React.FC = () => {
                 <div className="w-10"></div>
              </div>
 
-             <div className="flex-1 space-y-6 overflow-y-auto scrollbar-hide pb-20 px-1">
+             <div className="flex-1 space-y-6 overflow-y-auto scrollbar-hide pb-24 px-1">
                 <div className="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-2">
                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">当前完成进度</p>
                    <div className="flex items-center justify-between">
@@ -1100,7 +1146,7 @@ const EngineerApp: React.FC = () => {
                 </div>
              </div>
 
-             <div className="p-4 bg-white border-t border-slate-100 sticky bottom-0 z-30">
+             <div className="p-4 bg-white border-t border-slate-100 sticky bottom-20 z-30">
                 <button 
                   disabled={!repairActionText.trim() || isSubmittingRepair}
                   onClick={() => {
@@ -1205,7 +1251,7 @@ const EngineerApp: React.FC = () => {
                    </div>
                 </div>
              </div>
-             <div className="p-4 bg-white border-t border-slate-100 sticky bottom-0 z-30">
+             <div className="p-4 bg-white border-t border-slate-100 sticky bottom-20 z-30">
                 <button 
                   disabled={!inquiryText.trim() || isSubmittingInquiry}
                   onClick={handleSubmitInquiry}

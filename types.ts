@@ -48,15 +48,19 @@ export interface GuideStep {
   title: string;
   description: string;
   instruction?: string;      // 操作说明
-  imageUrl?: string;         // 图片
-  videoUrl?: string;         // 视频
+  imageUrl?: string;         // 图片 (保持兼容)
+  imageUrls?: string[];      // 多图片支持
+  videoUrl?: string;         // 视频 (保持兼容)
+  videoUrls?: string[];      // 多视频支持
+  pdfUrl?: string;           // PDF 文档链接 (保持兼容)
+  pdfUrls?: string[];        // 多 PDF 支持
   judgmentMethod?: string;   // 判断方法
   helpContent?: string;      // 帮助内容
   mediaUrl?: string;         // 保持向下兼容
   mediaType?: 'image' | 'video' | 'pdf';
-  pdfUrl?: string;           // 新增：PDF 文档链接
   safetyWarning?: string;
   isConfirmationRequired: boolean;
+  enabled?: boolean; // 新增：是否启用
   historyRepairCount?: number; // 历史维修次数
   branches?: {
     label: string;
@@ -109,7 +113,8 @@ export interface StepInquiry {
   photoUrl?: string;
   status: 'pending' | 'resolved';
   createdAt: string;
-  // 新增：反馈上下文增强
+  isNewIssue: boolean; // 是否为新问题
+  // 反馈上下文增强
   context?: {
     faultCode: string;
     stepTitle: string;
@@ -158,6 +163,7 @@ export interface MediaResource {
   url: string;
   size: string;
   tags: string[];
+  description?: string; // 新增：文件说明
   uploadTime: string;
   uploader: string;
 }

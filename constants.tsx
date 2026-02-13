@@ -16,8 +16,7 @@ export const MOCK_REPAIR_REQUESTS: RepairRequest[] = [
     photos: [
       'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400',
       'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400'
-    ],
-    createdAt: '2026-02-11 10:15'
+    ]
   }
 ];
 
@@ -29,6 +28,7 @@ export const MOCK_MEDIA_RESOURCES: MediaResource[] = [
     url: '#',
     size: '45.2 MB',
     tags: ['教学', 'NXT:2050i', '视频'],
+    description: '详细演示了 NXT:2050i 机台传感器的拆卸、清洗及复位校准全过程。',
     uploadTime: '2026-01-20 14:30',
     uploader: '李经理'
   },
@@ -91,17 +91,6 @@ export const MOCK_DEVICES: Device[] = [
   { id: 'd2', type: '刻蚀设备', model: 'Versys Kiyo45', subModel: '导体刻蚀', sn: 'LAM-KIYO-452', status: 'active', boundSopIds: ['g2', 'g4', 'g5'] },
   { id: 'd3', type: '薄膜沉积', model: 'Producer GT', subModel: 'PECVD', sn: 'AMAT-GT-991', status: 'offline', boundSopIds: [] },
   { id: 'd4', type: '离子注入', model: 'Varian VIISta', subModel: '高能注入', sn: 'VII-STA-042', status: 'active', boundSopIds: [] },
-  {
-    id: 'r4',
-    guideId: 'g1',
-    engineerId: 'u1',
-    startTime: '2026-02-11T09:00:00Z',
-    faultReason: '待定',
-    treatment: '正在按 SOP 流程进行传感器清洗...',
-    photos: [],
-    completedSteps: ['s1'],
-    status: 'ongoing'
-  },
 ];
 
 export const MOCK_USER: User = {
@@ -141,60 +130,133 @@ export const MOCK_GUIDES: MaintenanceGuide[] = [
         id: 's1', 
         stage: '准备阶段', 
         title: '洁净室内环境核查', 
-        description: '确认无尘室等级在 Class 1 以内。查阅《洁净室运行标准手册》以获取详细的环境参数指标。', 
-        instruction: '1. 检查压差计数值；2. 确认温湿度在正常范围；3. 检查无尘室入口风淋系统。',
-        imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800',
-        judgmentMethod: '压差计数值应在 15-25 Pa 之间。',
-        helpContent: '如果压差不足，请联系设施部检查空调系统。',
-        mediaUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 
-        mediaType: 'pdf', 
-        safetyWarning: '必须佩戴防静电服与防尘口罩。',
-        isConfirmationRequired: true,
-        historyRepairCount: 15
+        description: '确认洁净室等级满足 ISO 5 标准，且环境湿度在 45%-55% 之间。', 
+        instruction: '使用便携式粒子计数器在机台周围四个点位取样。',
+        safetyWarning: '非无尘服人员严禁进入操作区域。',
+        isConfirmationRequired: true 
       },
       { 
         id: 's2', 
         stage: '诊断阶段', 
-        title: '传感器镜头检查', 
-        description: '使用高倍率内窥镜检查物镜表面是否存在微尘污染。重点观察边缘区域是否有油脂残留。', 
-        instruction: '1. 开启内窥镜；2. 调整焦距对准镜头表面；3. 拍照记录污染情况。',
-        imageUrl: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800', 
-        judgmentMethod: '表面不应有肉眼可见的黑点或油膜。',
-        helpContent: '若发现油脂，需使用专用 IPA 溶剂。',
-        isConfirmationRequired: true,
-        historyRepairCount: 45
+        title: '传感器表面状态初检', 
+        description: '使用高倍电子内窥镜观察传感器透镜表面，记录污染区域。', 
+        instruction: '将内窥镜伸入 A1 检修口，保持距离透镜 5mm。',
+        isConfirmationRequired: true 
       },
+      { 
+        id: 's3', 
+        stage: '维修实施', 
+        title: '透镜表面深度清洁', 
+        description: '使用专用的无尘擦拭棒蘸取少量异丙基酒精，按“由中心向四周”的螺旋轨迹轻轻擦拭。', 
+        instruction: '擦拭压力不得超过 5g，防止产生划痕。',
+        isConfirmationRequired: true 
+      },
+      { 
+        id: 's4', 
+        stage: '测试验证', 
+        title: '对比度校准测试', 
+        description: '运行系统内置的传感器自校准程序，验证对比度指标。', 
+        instruction: '在控制台上点击“Run Calibration”按钮，等待 5 分钟。',
+        isConfirmationRequired: true 
+      },
+      { 
+        id: 's5', 
+        stage: '完工收尾', 
+        title: '工具清理与状态恢复', 
+        description: '撤除围挡，清理耗材，将机台状态切换回“Production”模式。', 
+        instruction: '在管理系统中上传本次维护的记录照片。',
+        isConfirmationRequired: true 
+      }
     ]
   },
   {
     id: 'g2',
     deviceId: 'd2',
     faultCode: 'AL-2005',
-    faultCategory: '真空系统泄露',
-    operationType: '维修',
-    scope: '负载腔室 (Loadlock)',
-    faultPhenomenon: '腔室压力无法达到设定阈值，抽真空时间过长。',
-    version: '1.0.0',
+    faultCategory: '腔室密封失效',
+    operationType: '密封件更换',
+    scope: '真空处理腔室',
+    faultPhenomenon: '腔室真空度无法维持，漏率 (Leak Rate) 超过 5mTorr/min。',
+    version: '1.2.0',
     published: true,
     totalOccurrenceCount: 45,
-    steps: []
+    steps: [
+      { 
+        id: 'g2s1', 
+        stage: '准备阶段', 
+        title: '腔室降温与泄压', 
+        description: '等待腔室温度降至 40°C 以下，手动关闭隔离阀。', 
+        safetyWarning: '严禁在高温高压下开启检修口。',
+        isConfirmationRequired: true 
+      },
+      { 
+        id: 'g2s2', 
+        stage: '维修实施', 
+        title: 'O型圈拆卸与密封面检查', 
+        description: '使用非金属起子取下旧密封圈，检查金属密封面是否有微米级划痕。', 
+        isConfirmationRequired: true 
+      }
+    ]
   },
   {
     id: 'g3',
     deviceId: 'd1',
     faultCode: 'AL-1005',
-    faultCategory: '机械手卡死',
-    operationType: '维修',
-    scope: '传输系统',
-    faultPhenomenon: 'Wafer Handling Robot 在取片过程中停止响应。',
-    version: '3.0.2',
+    faultCategory: '机械手卡顿',
+    operationType: '润滑与调整',
+    scope: '晶圆传输系统',
+    faultPhenomenon: 'Wafer Handler 在旋转轴 (Theta Axis) 运动时产生异响并伴随轻微震动。',
+    version: '3.0.5',
     published: true,
     totalOccurrenceCount: 89,
-    steps: []
+    steps: [
+      { id: 'g3s1', stage: '准备阶段', title: '机械手锁定', description: '在软件界面执行“Robot E-Stop”指令。', isConfirmationRequired: true }
+    ]
+  },
+  {
+    id: 'g4',
+    deviceId: 'd2',
+    faultCode: 'AL-2012',
+    faultCategory: '射频匹配失败',
+    operationType: '模块更换',
+    scope: '射频电源系统',
+    faultPhenomenon: 'RF Matching Network 无法找到匹配点，反射功率 (Reflected Power) 过高。',
+    version: '1.0.2',
+    published: true,
+    totalOccurrenceCount: 32,
+    steps: [
+      { id: 'g4s1', stage: '准备阶段', title: '断开主电源', description: '拉下 Q1 漏电断路器，并悬挂“正在维修”警示牌。', isConfirmationRequired: true }
+    ]
+  },
+  {
+    id: 'g5',
+    deviceId: 'd2',
+    faultCode: 'AL-2018',
+    faultCategory: '冷却水路堵塞',
+    operationType: '管路冲洗',
+    scope: '温控循环系统',
+    faultPhenomenon: 'Chiller 流量告警，热交换器进出口压差异常。',
+    version: '1.1.0',
+    published: true,
+    totalOccurrenceCount: 15,
+    steps: [
+      { id: 'g5s1', stage: '准备阶段', title: '关闭主供水阀', description: '关闭进水和回水手动球阀。', isConfirmationRequired: true }
+    ]
   }
 ];
 
 export const MOCK_RECORDS: RepairRecord[] = [
+  {
+    id: 'r4',
+    guideId: 'g1',
+    engineerId: 'u1',
+    startTime: '2026-02-11T09:00:00Z',
+    faultReason: '待定',
+    treatment: '正在按 SOP 流程进行传感器清洗...',
+    photos: [],
+    completedSteps: ['s1'],
+    status: 'ongoing'
+  },
   {
     id: 'r1',
     guideId: 'g1',
@@ -242,7 +304,61 @@ export const MOCK_INQUIRIES: StepInquiry[] = [
     stepId: 's1',
     question: '洁净室目前的压差指标略低于手册建议，是否可以继续操作？',
     photoUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=400',
-    timestamp: '2025-05-15T10:30:00Z',
-    status: 'pending'
+    createdAt: '2025-05-15T10:30:00Z',
+    status: 'pending',
+    isNewIssue: false,
+    context: {
+      faultCode: 'AL-1002',
+      stepTitle: '洁净室内环境核查',
+      isStepRelated: true
+    }
+  },
+  {
+    id: 'inq2',
+    engineerId: 'u2',
+    deviceId: 'd2',
+    guideId: 'g2',
+    stepId: 'unknown',
+    question: '在执行真空泵维护时，发现外壳有不明液体渗漏，SOP中未提及此情况。',
+    createdAt: '2025-05-16T09:15:00Z',
+    status: 'pending',
+    isNewIssue: true,
+    context: {
+      faultCode: 'AL-2005',
+      stepTitle: '脱离步骤的新发现',
+      isStepRelated: false
+    }
+  },
+  {
+    id: 'inq3',
+    engineerId: 'u3',
+    deviceId: 'd1',
+    guideId: 'g3',
+    stepId: 'unknown',
+    question: '在搬运机械手电机时，发现底座固定螺栓有轻微裂纹，这是否属于紧急更换范畴？',
+    createdAt: '2026-02-12T14:20:00Z',
+    status: 'pending',
+    isNewIssue: true,
+    context: {
+      faultCode: 'AL-1005',
+      stepTitle: '机械手底座检查',
+      isStepRelated: false
+    }
+  },
+  {
+    id: 'inq4',
+    engineerId: 'u4',
+    deviceId: 'd2',
+    guideId: 'g2',
+    stepId: 's1',
+    question: 'SOP 中提到的密封圈润滑脂型号为 Krytox 240AC，但目前库房只有 240AB，两者是否可以通用？',
+    createdAt: '2026-02-13T09:45:00Z',
+    status: 'pending',
+    isNewIssue: false,
+    context: {
+      faultCode: 'AL-2005',
+      stepTitle: '腔室密封检查',
+      isStepRelated: true
+    }
   }
 ];
