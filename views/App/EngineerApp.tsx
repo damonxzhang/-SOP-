@@ -626,12 +626,10 @@ const EngineerApp: React.FC = () => {
                          <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg uppercase tracking-wider">步骤 {idx + 1}</span>
                             <div className="flex items-center space-x-2">
-                               {s.historyRepairCount !== undefined && (
-                                  <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100">
-                                     <History size={10} />
-                                     <span className="text-[9px] font-black uppercase tracking-tighter">反馈次数: {s.historyRepairCount}</span>
-                                  </div>
-                               )}
+                               <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100">
+                                  <History size={10} />
+                                  <span className="text-[9px] font-black uppercase tracking-tighter">反馈次数: {s.historyRepairCount || 1}</span>
+                               </div>
                                <div className="p-1 bg-blue-50 text-blue-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Play size={10} fill="currentColor" />
                                </div>

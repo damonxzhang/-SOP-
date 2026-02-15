@@ -132,9 +132,16 @@
       "historyRepairCount": 12
     }
   ]
-  ```
 
-### 4.2 提交步骤疑问/反馈
+### 4.2 步骤反馈计数逻辑 (historyRepairCount)
+**描述**: 该字段用于记录每个 SOP 步骤在实际维修中被执行并反馈有效的次数。
+- **用途**: 
+  - **排序**: PDA 端会根据 `historyRepairCount` 对步骤进行降序排列，将“高频有效步骤”置顶，提高维修效率。
+  - **评估**: 管理员可根据此数值评估 SOP 步骤的实用性。
+- **更新触发**: 当调用 `POST /api/records` 提交维修记录且 `status` 为 `completed` 时，后台会自动将该记录关联的所有 `completedSteps` 对应的 `historyRepairCount` 加 1。
+- **初始值**: 新创建的步骤默认初始值为 1。
+
+### 4.3 提交步骤疑问/反馈
 **描述**: 在维修过程中提交疑问或反馈。
 - **接口**: `POST /api/inquiries`
 - **输入**: 

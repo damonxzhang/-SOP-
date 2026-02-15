@@ -1296,8 +1296,28 @@ const AdminDashboard: React.FC = () => {
                           <div key={idx} className={`p-6 border rounded-[2rem] flex flex-col space-y-4 relative group transition-all duration-300 ${step.enabled === false ? 'bg-slate-50 border-slate-200 opacity-60 grayscale-[0.5]' : 'bg-white border-slate-200 shadow-sm'}`}>
                             <div className="flex items-center space-x-4">
                              <span className="w-8 h-8 bg-slate-900 text-white text-xs font-black rounded-full flex items-center justify-center">{idx + 1}</span>
-                             <input className="flex-1 p-2 border-b-2 border-slate-100 outline-none font-black text-sm focus:border-blue-600 transition-colors" value={step.title} onChange={e => { const newSteps = [...editingGuide.steps]; newSteps[idx].title = e.target.value; setEditingGuide({...editingGuide, steps: newSteps}); }} />
-                             {step.historyRepairCount !== undefined && (
+                             <div className="flex-1 flex items-center space-x-2">
+                               <input className="flex-1 p-2 border-b-2 border-slate-100 outline-none font-black text-sm focus:border-blue-600 transition-colors" value={step.title} onChange={e => { const newSteps = [...editingGuide.steps]; newSteps[idx].title = e.target.value; setEditingGuide({...editingGuide, steps: newSteps}); }} />
+                               <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200 shrink-0 animate-pulse">
+                                 <History size={12} />
+                                 <span className="text-[10px] font-black uppercase tracking-tight">反馈次数: {step.historyRepairCount || 1}</span>
+                               </div>
+                               <button 
+                                 onClick={() => {
+                                   const newSteps = [...editingGuide.steps];
+                                   newSteps[idx].enabled = !(newSteps[idx].enabled !== false);
+                                   setEditingGuide({...editingGuide, steps: newSteps});
+                                 }} 
+                                 className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center shrink-0 ${
+                                   step.enabled === false 
+                                     ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' 
+                                     : 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white shadow-sm'
+                                 }`}
+                               >
+                                 {step.enabled === false ? <><Unlock size={12} className="mr-1.5"/> 启用</> : <><Lock size={12} className="mr-1.5"/> 禁用</>}
+                               </button>
+                             </div>
+                             {false && step.historyRepairCount !== undefined && (
                                <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl">
                                  <History size={12} className="text-slate-400" />
                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">历史使用: {step.historyRepairCount} 次</span>
@@ -1539,20 +1559,7 @@ const AdminDashboard: React.FC = () => {
                               </div>
                             </div>
                            
-                           <button 
-                             onClick={() => {
-                               const newSteps = [...editingGuide.steps];
-                               newSteps[idx].enabled = !(newSteps[idx].enabled !== false);
-                               setEditingGuide({...editingGuide, steps: newSteps});
-                             }} 
-                             className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center ${
-                               step.enabled === false 
-                                 ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' 
-                                 : 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white shadow-sm'
-                             }`}
-                           >
-                             {step.enabled === false ? <><Unlock size={12} className="mr-1.5"/> 启用步骤</> : <><Lock size={12} className="mr-1.5"/> 禁用步骤</>}
-                           </button>
+                           {/* 移除了原有的绝对定位禁用按钮，已整合到上方标题栏 */}
                          </div>
                        ))}
                        <button onClick={() => setEditingGuide({...editingGuide, steps: [...editingGuide.steps, { id: `s-${Date.now()}`, stage: '维修实施', title: '新步骤', description: '', isConfirmationRequired: true, imageUrl: '', videoUrl: '', pdfUrl: '' }]})} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center"><Plus size={18} className="mr-2"/> 添加执行步骤</button>
