@@ -255,6 +255,31 @@
 }
 ```
 
+### 3.4 发布/禁用 SOP
+- **路径**: `POST /guides/{id}/status`
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| published | boolean | 是 | 是否发布（true: 启用/发布, false: 禁用） |
+- **请求示例**:
+```json
+{
+  "published": false
+}
+```
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| message | string | 提示信息 |
+- **响应示例**:
+```json
+{
+  "code": 200,
+  "message": "SOP 状态更新成功"
+}
+```
+
 ---
 
 ## 4. 工程师管理 (User Management)

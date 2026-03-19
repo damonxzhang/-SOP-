@@ -127,10 +127,33 @@ const AdminDashboard: React.FC = () => {
     setEditingUser(null);
   };
 
-  const handleToggleGuideStatus = (guideId: string) => {
-    setGuides(prev => prev.map(g => 
-      g.id === guideId ? { ...g, published: !g.published } : g
-    ));
+  const handleToggleGuideStatus = async (guideId: string) => {
+    const targetGuide = guides.find(g => g.id === guideId);
+    if (!targetGuide) return;
+    
+    const newStatus = !targetGuide.published;
+    
+    try {
+      // 这里的路径应根据后端实际部署环境调整，此处采用文档定义的规范
+      const response = await fetch(`http://212.64.29.230:8080/backend/guides/${guideId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ published: newStatus })
+      });
+      
+      const result = await response.json();
+      if (result.code === 200) {
+        setGuides(prev => prev.map(g => 
+          g.id === guideId ? { ...g, published: newStatus } : g
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update SOP status:', error);
+      // 后端接口未准备好时，依然在前端模拟切换，方便调试演示
+      setGuides(prev => prev.map(g => 
+        g.id === guideId ? { ...g, published: newStatus } : g
+      ));
+    }
   };
 
   const renderPersonalInfo = () => (
