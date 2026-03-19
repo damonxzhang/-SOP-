@@ -131,26 +131,6 @@
 }
 ```
 
-### 2.3 获取 MTTR 预测数据
-- **路径**: `GET /stats/mttr_prediction`
-- **响应参数说明**:
-| 字段 | 类型 | 说明 |
-| :--- | :--- | :--- |
-| code | number | 状态码 |
-| data[].month | string | 月份（如：10月） |
-| data[].actual | number/null | 实际 MTTR 数值（若为未来月份则为 null） |
-| data[].prediction | number | 预测 MTTR 数值 |
-- **响应示例**:
-```json
-{
-  "code": 200,
-  "data": [
-    { "month": "10月", "actual": 4.2, "prediction": 4.2 },
-    { "month": "04月", "actual": null, "prediction": 3.0 }
-  ]
-}
-```
-
 ---
 
 ## 3. SOP 库管理 (SOP Library)
