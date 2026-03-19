@@ -39,6 +39,9 @@
 | data.user_info.name | string | 用户真实姓名 |
 | data.user_info.role | string | 用户角色（ADMIN: 管理员, SENIOR_ENGINEER: 资深工程师） |
 | data.user_info.avatar | string | 用户头像 URL |
+| data.user_info.menus[] | array | 权限目录列表（用户可访问的模块/目录） |
+| data.user_info.menus[].id | string | 目录 ID |
+| data.user_info.menus[].name | string | 目录名称 |
 - **响应示例**:
 ```json
 {
@@ -51,7 +54,14 @@
       "id": "user-1",
       "name": "管理员",
       "role": "ADMIN",
-      "avatar": "url"
+      "avatar": "url",
+      "menus": [
+        { "id": "dashboard", "name": "统计看板" },
+        { "id": "sop_library", "name": "标准 SOP 库" },
+        { "id": "inquiries", "name": "现场提问记录" },
+        { "id": "media_library", "name": "多媒体资料库" },
+        { "id": "user_management", "name": "用户权限管理" }
+      ]
     }
   }
 }
@@ -136,8 +146,8 @@
 ## 3. SOP 库管理 (SOP Library)
 
 ### 3.1 获取 SOP 列表
-- **路径**: `GET /guides`
-- **查询参数说明**:
+- **路径**: `POST /guides/list`
+- **请求参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
 | search | string | 否 | 搜索关键词（故障代码或类别名称） |
@@ -146,7 +156,13 @@
 | page | number | 否 | 当前页码，默认 1 |
 | limit | number | 否 | 每页条数，默认 10 |
 - **请求示例**:
-`GET /api/admin/guides?page=1&limit=10&search=E102`
+```json
+{
+  "search": "E102",
+  "page": 1,
+  "limit": 10
+}
+```
 - **响应参数说明**:
 | 字段 | 类型 | 说明 |
 | :--- | :--- | :--- |
@@ -190,26 +206,18 @@
 ```
 
 ### 3.2 获取 SOP 详情
-- **路径**: `GET /guides/{id}`
+- **路径**: `POST /guides/detail`
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| id | string | 是 | SOP 唯一 ID |
+- **请求示例**:
+```json
+{
+  "id": "uuid-1"
+}
+```
 - **响应参数说明**:
-| 字段 | 类型 | 说明 |
-| :--- | :--- | :--- |
-| code | number | 状态码 |
-| data.id | string | SOP 唯一 ID |
-| data.fault_code | string | 故障代码 |
-| data.steps[] | array | 维护步骤列表 |
-| data.steps[].id | string | 步骤唯一 ID |
-| data.steps[].stage | string | 步骤所属阶段（如：准备、诊断、维修、验证） |
-| data.steps[].title | string | 步骤标题 |
-| data.steps[].description | string | 步骤详细描述 |
-| data.steps[].instruction | string | 操作指令/注意事项 |
-| data.steps[].image_urls | array | 图片资源 URL 数组 |
-| data.steps[].video_urls | array | 视频资源 URL 数组 |
-| data.steps[].pdf_urls | array | PDF 关联文档 URL 数组 |
-| data.steps[].is_confirmation_required | boolean | 是否需要工程师确认操作完成 |
-| data.steps[].enabled | boolean | 步骤是否启用 |
-| data.steps[].history_repair_count | number | 该步骤历史维修次数记录 |
-- **响应示例**:
 ```json
 {
   "code": 200,
@@ -236,8 +244,23 @@
 ```
 
 ### 3.3 保存/更新 SOP
-- **路径**: `POST /guides` (新增) 或 `PUT /guides/{id}` (更新)
-- **请求参数说明**: 与获取详情中的 `data` 结构一致
+- **路径**: `POST /guides/save`
+- **请求参数说明**: 
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| id | string | 否 | SOP ID（更新时必填，新增时不传） |
+| fault_code | string | 是 | 故障代码 |
+| device_id | string | 是 | 关联机台 ID |
+| steps | array | 是 | 维护步骤列表 |
+- **请求示例**:
+```json
+{
+  "id": "uuid-1",
+  "fault_code": "E102",
+  "device_id": "device-001",
+  "steps": []
+}
+```
 - **响应参数说明**:
 | 字段 | 类型 | 说明 |
 | :--- | :--- | :--- |
@@ -256,14 +279,16 @@
 ```
 
 ### 3.4 发布/禁用 SOP
-- **路径**: `POST /guides/{id}/status`
+- **路径**: `POST /guides/status`
 - **请求参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
+| id | string | 是 | SOP 唯一 ID |
 | published | boolean | 是 | 是否发布（true: 启用/发布, false: 禁用） |
 - **请求示例**:
 ```json
 {
+  "id": "uuid-1",
   "published": false
 }
 ```
@@ -277,6 +302,35 @@
 {
   "code": 200,
   "message": "SOP 状态更新成功"
+}
+```
+
+### 3.5 启用/禁用 SOP 步骤
+- **路径**: `POST /guides/steps/status`
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| id | string | 是 | SOP 唯一 ID |
+| step_id | string | 是 | 步骤唯一 ID |
+| enabled | boolean | 是 | 是否启用（true: 启用, false: 禁用） |
+- **请求示例**:
+```json
+{
+  "id": "uuid-1",
+  "step_id": "step-1",
+  "enabled": false
+}
+```
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| message | string | 提示信息 |
+- **响应示例**:
+```json
+{
+  "code": 200,
+  "message": "步骤状态更新成功"
 }
 ```
 
@@ -326,14 +380,23 @@
 ```
 
 ### 4.2 更新工程师信息/权限
-- **路径**: `PUT /users/{id}`
+- **路径**: `POST /users/update`
 - **请求参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
+| id | string | 是 | 工程师唯一 ID |
 | name | string | 否 | 修改后的姓名 |
 | role | string | 否 | 修改后的角色 |
 | status | string | 否 | 账号状态 |
 | permissions | object | 否 | 修改后的权限配置对象 |
+- **请求示例**:
+```json
+{
+  "id": "user-1",
+  "name": "张三",
+  "status": "active"
+}
+```
 - **响应示例**:
 ```json
 {
@@ -347,12 +410,18 @@
 ## 5. 现场提问记录 (Inquiries)
 
 ### 5.1 获取提问列表
-- **路径**: `GET /inquiries`
-- **查询参数说明**:
+- **路径**: `POST /inquiries/list`
+- **请求参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
 | status | string | 否 | 提问状态 (pending: 待处理, resolved: 已解决) |
 | fault_code | string | 否 | 关联的故障代码 |
+- **请求示例**:
+```json
+{
+  "status": "pending"
+}
+```
 - **响应参数说明**:
 | 字段 | 类型 | 说明 |
 | :--- | :--- | :--- |
@@ -361,6 +430,7 @@
 | data[].engineer_id | string | 提问工程师 ID |
 | data[].device_id | string | 关联机台 ID |
 | data[].fault_code | string | 关联故障代码 |
+| data[].step_id | string | 关联的 SOP 步骤 ID |
 | data[].question | string | 工程师提出的问题描述 |
 | data[].photo_url | string | 现场拍摄的照片 URL |
 | data[].status | string | 处理状态 |
@@ -378,6 +448,7 @@
       "engineer_id": "user-1",
       "device_id": "device-001",
       "fault_code": "E102",
+      "step_id": "step-1",
       "question": "激光器侧盖打不开，是否有特殊卡扣？",
       "photo_url": "url",
       "status": "pending",
@@ -393,12 +464,21 @@
 ```
 
 ### 5.2 回复并处理提问
-- **路径**: `POST /inquiries/{id}/resolve`
+- **路径**: `POST /inquiries/resolve`
 - **请求参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
+| id | string | 是 | 提问记录唯一 ID |
 | answer | string | 是 | 管理员提供的解答或指导建议 |
 | apply_to_sop | boolean | 否 | 是否将此解答同步更新到对应的 SOP 步骤中 |
+- **请求示例**:
+```json
+{
+  "id": "inq-1",
+  "answer": "请确认激光器状态",
+  "apply_to_sop": true
+}
+```
 - **响应示例**:
 ```json
 {
@@ -412,12 +492,19 @@
 ## 6. 多媒体资料库 (Media Library)
 
 ### 6.1 获取资源列表
-- **路径**: `GET /media`
-- **查询参数说明**:
+- **路径**: `POST /media/list`
+- **请求参数说明**:
 | 字段 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
 | type | string | 否 | 资源类型 (image/video/pdf/doc) |
 | search | string | 否 | 资源名称搜索关键词 |
+- **请求示例**:
+```json
+{
+  "type": "image",
+  "search": "激光器"
+}
+```
 - **响应参数说明**:
 | 字段 | 类型 | 说明 |
 | :--- | :--- | :--- |
@@ -471,7 +558,17 @@
 ```
 
 ### 6.3 删除资源
-- **路径**: `DELETE /media/{id}`
+- **路径**: `POST /media/delete`
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| id | string | 是 | 资源唯一 ID |
+- **请求示例**:
+```json
+{
+  "id": "media-1"
+}
+```
 - **响应示例**:
 ```json
 {
