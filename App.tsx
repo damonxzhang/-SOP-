@@ -37,49 +37,18 @@ const App: React.FC = () => {
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse delay-700" />
         
-        <div className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-2 gap-0 bg-white/5 backdrop-blur-2xl rounded-[3rem] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 m-6">
+        <div className="w-full max-w-[500px] bg-white/5 backdrop-blur-2xl rounded-[3rem] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 m-6">
           
-          {/* 左侧：品牌与宣传 */}
-          <div className="hidden lg:flex flex-col justify-between p-16 bg-gradient-to-br from-blue-600/20 to-transparent border-r border-white/5">
-            <div>
-              <div className="flex items-center space-x-3 mb-12">
-                <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-500/20">
-                  <Shield className="w-8 h-8 text-white" />
-                </div>
-                <span className="text-2xl font-black text-white tracking-tight">维修SOP系统</span>
+          {/* 右侧：登录表单 (现居中) */}
+          <div className="p-10 lg:p-16 flex flex-col justify-center bg-white/5">
+            <div className="flex items-center space-x-3 mb-12 justify-center">
+              <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-500/20">
+                <Shield className="w-8 h-8 text-white" />
               </div>
-              
-              <h2 className="text-5xl font-black text-white leading-tight mb-6">
-                数字化驱动<br />
-                <span className="text-blue-400">卓越运维</span>
-              </h2>
-              <p className="text-slate-400 text-lg leading-relaxed max-w-md">
-                专为精密制造设计的标准化作业平台。沉淀专家经验，赋能一线生产，构建安全、高效、透明的维保体系。
-              </p>
+              <span className="text-2xl font-black text-white tracking-tight">维修SOP系统</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <p className="text-3xl font-black text-white mb-1">98.2%</p>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">SOP 依同率</p>
-              </div>
-              <div>
-                <p className="text-3xl font-black text-white mb-1">-24%</p>
-                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">平均修复时间</p>
-              </div>
-            </div>
-          </div>
-
-          {/* 右侧：登录表单 */}
-          <div className="p-10 lg:p-20 flex flex-col justify-center bg-white/5">
-            <div className="lg:hidden flex items-center space-x-3 mb-12 justify-center">
-              <div className="bg-blue-600 p-2 rounded-xl">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-black text-white tracking-tight">维修SOP系统</span>
-            </div>
-
-            <div className="mb-10 text-center lg:text-left">
+            <div className="mb-10 text-center">
               <h1 className="text-3xl font-black text-white mb-3 tracking-tight">欢迎回来</h1>
               <p className="text-slate-400 font-medium">请验证您的身份以访问安全运维管理门户</p>
             </div>
@@ -164,20 +133,6 @@ const App: React.FC = () => {
               </div>
               
               <div className="h-8 w-px bg-slate-200" />
-
-              <button 
-                onClick={() => {
-                  if(confirm('确定要退出登录吗？')) {
-                    setCurrentUser(null);
-                  }
-                }}
-                className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-90 group"
-                title="退出系统"
-              >
-                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
-              </button>
-              
-              <div className="h-8 w-px bg-slate-200" />
               
               <div className="relative" ref={userMenuRef}>
                 <button 
@@ -218,6 +173,20 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              <div className="h-8 w-px bg-slate-200" />
+
+              <button 
+                onClick={() => {
+                  if(confirm('确定要退出登录吗？')) {
+                    setCurrentUser(null);
+                  }
+                }}
+                className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-90 group"
+                title="退出系统"
+              >
+                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
+              </button>
             </div>
           </div>
         </nav>
