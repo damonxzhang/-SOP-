@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  AreaChart, Area, Cell
+  AreaChart, Area, Cell, LineChart, Line, Legend
 } from 'recharts';
 import { MOCK_DEVICES, MOCK_GUIDES, ALL_USERS, MOCK_INQUIRIES, MOCK_MEDIA_RESOURCES, MOCK_USER } from '../../constants';
 import { MaintenanceGuide, GuideStep, ProcessStage, User, Role, PermissionLevel, StepInquiry, MediaResource } from '../../types';
@@ -249,6 +249,28 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const faultTrendData = [
+    { name: 'Mon', count: 4 },
+    { name: 'Tue', count: 7 },
+    { name: 'Wed', count: 5 },
+    { name: 'Thu', count: 9 },
+    { name: 'Fri', count: 6 },
+    { name: 'Sat', count: 3 },
+    { name: 'Sun', count: 2 },
+  ];
+
+  const mttrPredictionData = [
+    { name: '10月', actual: 4.2, prediction: 4.2 },
+    { name: '11月', actual: 3.8, prediction: 3.8 },
+    { name: '12月', actual: 4.5, prediction: 4.5 },
+    { name: '01月', actual: 3.9, prediction: 3.9 },
+    { name: '02月', actual: 3.4, prediction: 3.4 },
+    { name: '03月', actual: 3.2, prediction: 3.2 },
+    { name: '04月', prediction: 3.0 },
+    { name: '05月', prediction: 2.8 },
+    { name: '06月', prediction: 2.7 },
+  ];
+
   const renderDashboard = () => (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -269,17 +291,53 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm h-80 flex items-center justify-center text-slate-300">
-           <p className="text-xs font-black uppercase tracking-widest flex flex-col items-center">
-             <BarChart3 size={48} className="mb-4 opacity-10" />
-             故障趋势分布加载中...
-           </p>
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm h-80">
+           <div className="flex items-center justify-between mb-6">
+              <h4 className="text-sm font-black text-slate-800 flex items-center">
+                <BarChart3 size={18} className="mr-2 text-blue-500" /> 故障趋势分布 (近7日)
+              </h4>
+           </div>
+           <div className="h-[200px] w-full">
+             <ResponsiveContainer width="100%" height="100%">
+               <AreaChart data={faultTrendData}>
+                 <defs>
+                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                   </linearGradient>
+                 </defs>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} dy={10} />
+                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} />
+                 <RechartsTooltip 
+                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                 />
+                 <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+               </AreaChart>
+             </ResponsiveContainer>
+           </div>
         </div>
-        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm h-80 flex items-center justify-center text-slate-300">
-           <p className="text-xs font-black uppercase tracking-widest flex flex-col items-center">
-             <TrendingUp size={48} className="mb-4 opacity-10" />
-             MTTR 预测模型加载中...
-           </p>
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm h-80">
+           <div className="flex items-center justify-between mb-6">
+              <h4 className="text-sm font-black text-slate-800 flex items-center">
+                <TrendingUp size={18} className="mr-2 text-rose-500" /> MTTR 预测模型 (h)
+              </h4>
+           </div>
+           <div className="h-[200px] w-full">
+             <ResponsiveContainer width="100%" height="100%">
+               <LineChart data={mttrPredictionData}>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} dy={10} />
+                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} />
+                 <RechartsTooltip 
+                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                 />
+                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+                 <Line type="monotone" dataKey="actual" name="实际值" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                 <Line type="monotone" dataKey="prediction" name="预测趋势" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+               </LineChart>
+             </ResponsiveContainer>
+           </div>
         </div>
       </div>
     </div>
