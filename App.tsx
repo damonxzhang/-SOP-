@@ -164,6 +164,20 @@ const App: React.FC = () => {
               </div>
               
               <div className="h-8 w-px bg-slate-200" />
+
+              <button 
+                onClick={() => {
+                  if(confirm('确定要退出登录吗？')) {
+                    setCurrentUser(null);
+                  }
+                }}
+                className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-90 group"
+                title="退出系统"
+              >
+                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
+              </button>
+              
+              <div className="h-8 w-px bg-slate-200" />
               
               <div className="relative" ref={userMenuRef}>
                 <button 
