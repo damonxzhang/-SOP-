@@ -14,7 +14,13 @@
 
 ### 1.1 用户登录
 - **路径**: `POST /auth/login`
-- **请求体**:
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| username | string | 是 | 用户登录账号（工号或邮箱） |
+| password | string | 是 | 用户登录密码（加密后的字符串） |
+| login_type | string | 否 | 登录类型（如：standard, sso） |
+- **请求示例**:
 ```json
 {
   "username": "admin",
@@ -22,7 +28,18 @@
   "login_type": "standard"
 }
 ```
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码（200: 成功, 401: 未授权, 500: 服务器错误） |
+| message | string | 提示信息 |
+| data.token | string | JWT 访问令牌 |
+| data.expire_at | string | 令牌过期时间 (YYYY-MM-DD HH:mm:ss) |
+| data.user_info.id | string | 用户唯一 ID |
+| data.user_info.name | string | 用户真实姓名 |
+| data.user_info.role | string | 用户角色（ADMIN: 管理员, SENIOR_ENGINEER: 资深工程师） |
+| data.user_info.avatar | string | 用户头像 URL |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -43,7 +60,12 @@
 ### 1.2 用户登出
 - **路径**: `POST /auth/logout`
 - **请求体**: 空
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| message | string | 提示信息 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -57,7 +79,18 @@
 
 ### 2.1 获取概览统计数据
 - **路径**: `GET /stats/overview`
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data.mttr_avg | string | 平均修复时间 (Mean Time To Repair) |
+| data.mttr_trend | string | MTTR 环比趋势（如：-12% 表示下降） |
+| data.sop_compliance_rate | string | SOP 合规执行率 |
+| data.sop_compliance_trend | string | 合规率环比趋势 |
+| data.pending_inquiries_count | number | 待处理的现场提问数量 |
+| data.high_risk_ops_rate | string | 高风险操作占比 |
+| data.high_risk_ops_trend | string | 高风险占比环比趋势 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -75,7 +108,13 @@
 
 ### 2.2 获取故障趋势分布 (近7日)
 - **路径**: `GET /stats/fault_trend`
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data[].day | string | 星期（如：Mon, Tue） |
+| data[].count | number | 当日故障发生次数 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -93,7 +132,14 @@
 
 ### 2.3 获取 MTTR 预测数据
 - **路径**: `GET /stats/mttr_prediction`
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data[].month | string | 月份（如：10月） |
+| data[].actual | number/null | 实际 MTTR 数值（若为未来月份则为 null） |
+| data[].prediction | number | 预测 MTTR 数值 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -110,11 +156,25 @@
 
 ### 3.1 获取 SOP 列表
 - **路径**: `GET /guides`
-- **查询参数**:
-  - `search`: 搜索关键词（故障代码或类别）
-  - `device_id`: 关联机台 ID
-  - `fault_category`: 故障类别
-- **响应**:
+- **查询参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| search | string | 否 | 搜索关键词（故障代码或类别名称） |
+| device_id | string | 否 | 关联的机台 ID |
+| fault_category | string | 否 | 故障类别 |
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data[].id | string | SOP 唯一 ID |
+| data[].device_id | string | 关联机台 ID |
+| data[].fault_code | string | 故障代码 (Error Code) |
+| data[].fault_category | string | 故障类别 |
+| data[].operation_type | string | 操作类型（如：校准、更换、清洁） |
+| data[].version | string | 版本号 |
+| data[].published | boolean | 是否已发布 |
+| data[].total_occurrence_count | number | 累计发生次数统计 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -135,7 +195,25 @@
 
 ### 3.2 获取 SOP 详情
 - **路径**: `GET /guides/{id}`
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data.id | string | SOP 唯一 ID |
+| data.fault_code | string | 故障代码 |
+| data.steps[] | array | 维护步骤列表 |
+| data.steps[].id | string | 步骤唯一 ID |
+| data.steps[].stage | string | 步骤所属阶段（如：准备、诊断、维修、验证） |
+| data.steps[].title | string | 步骤标题 |
+| data.steps[].description | string | 步骤详细描述 |
+| data.steps[].instruction | string | 操作指令/注意事项 |
+| data.steps[].image_urls | array | 图片资源 URL 数组 |
+| data.steps[].video_urls | array | 视频资源 URL 数组 |
+| data.steps[].pdf_urls | array | PDF 关联文档 URL 数组 |
+| data.steps[].is_confirmation_required | boolean | 是否需要工程师确认操作完成 |
+| data.steps[].enabled | boolean | 步骤是否启用 |
+| data.steps[].history_repair_count | number | 该步骤历史维修次数记录 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -163,8 +241,23 @@
 
 ### 3.3 保存/更新 SOP
 - **路径**: `POST /guides` (新增) 或 `PUT /guides/{id}` (更新)
-- **请求体**: 同获取详情的 data 结构
-- **响应**: `{ "code": 200, "message": "保存成功", "data": { "id": "..." } }`
+- **请求参数说明**: 与获取详情中的 `data` 结构一致
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| message | string | 提示信息 |
+| data.id | string | 已保存的 SOP ID |
+- **响应示例**:
+```json
+{
+  "code": 200,
+  "message": "保存成功",
+  "data": {
+    "id": "uuid-1"
+  }
+}
+```
 
 ---
 
@@ -172,7 +265,22 @@
 
 ### 4.1 获取工程师列表
 - **路径**: `GET /users`
-- **响应**:
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data[].id | string | 工程师唯一 ID |
+| data[].name | string | 姓名 |
+| data[].employee_id | string | 工号 (Employee ID) |
+| data[].role | string | 角色（SENIOR_ENGINEER, JUNIOR_ENGINEER, ADMIN） |
+| data[].department | string | 所属部门 |
+| data[].status | string | 账号状态（active: 正常, inactive: 禁用） |
+| data[].last_login | string | 最后登录时间 |
+| data[].avatar | string | 头像 URL |
+| data[].permissions.dashboard | string | 看板权限 (view/manage/none) |
+| data[].permissions.sop_library | string | SOP 库权限 (view/manage/none) |
+| data[].permissions.user_management | string | 用户管理权限 (view/manage/none) |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -198,16 +306,18 @@
 
 ### 4.2 更新工程师信息/权限
 - **路径**: `PUT /users/{id}`
-- **请求体**:
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| name | string | 否 | 修改后的姓名 |
+| role | string | 否 | 修改后的角色 |
+| status | string | 否 | 账号状态 |
+| permissions | object | 否 | 修改后的权限配置对象 |
+- **响应示例**:
 ```json
 {
-  "name": "张三",
-  "role": "ADMIN",
-  "status": "active",
-  "permissions": {
-    "dashboard": "manage",
-    "sop_library": "manage"
-  }
+  "code": 200,
+  "message": "更新成功"
 }
 ```
 
@@ -217,8 +327,27 @@
 
 ### 5.1 获取提问列表
 - **路径**: `GET /inquiries`
-- **查询参数**: `status` (pending/resolved), `fault_code`
-- **响应**:
+- **查询参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| status | string | 否 | 提问状态 (pending: 待处理, resolved: 已解决) |
+| fault_code | string | 否 | 关联的故障代码 |
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data[].id | string | 提问记录唯一 ID |
+| data[].engineer_id | string | 提问工程师 ID |
+| data[].device_id | string | 关联机台 ID |
+| data[].fault_code | string | 关联故障代码 |
+| data[].question | string | 工程师提出的问题描述 |
+| data[].photo_url | string | 现场拍摄的照片 URL |
+| data[].status | string | 处理状态 |
+| data[].created_at | string | 提交时间 |
+| data[].is_new_issue | boolean | 是否为新出现的故障类型 |
+| data[].context.step_title | string | 提问时所在的 SOP 步骤标题 |
+| data[].context.is_step_related | boolean | 是否与特定步骤强相关 |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -244,11 +373,16 @@
 
 ### 5.2 回复并处理提问
 - **路径**: `POST /inquiries/{id}/resolve`
-- **请求体**:
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| answer | string | 是 | 管理员提供的解答或指导建议 |
+| apply_to_sop | boolean | 否 | 是否将此解答同步更新到对应的 SOP 步骤中 |
+- **响应示例**:
 ```json
 {
-  "answer": "侧盖下方有一个隐藏推杆，需向左滑动后再拉开。",
-  "apply_to_sop": true
+  "code": 200,
+  "message": "回复已发送，提问已标记为解决"
 }
 ```
 
@@ -258,8 +392,24 @@
 
 ### 6.1 获取资源列表
 - **路径**: `GET /media`
-- **查询参数**: `type` (image/video/pdf/doc), `search`
-- **响应**:
+- **查询参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| type | string | 否 | 资源类型 (image/video/pdf/doc) |
+| search | string | 否 | 资源名称搜索关键词 |
+- **响应参数说明**:
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| code | number | 状态码 |
+| data[].id | string | 资源唯一 ID |
+| data[].name | string | 资源名称（文件名） |
+| data[].type | string | 资源类型 |
+| data[].url | string | 访问/下载 URL |
+| data[].size | string | 文件大小（如：2.4MB） |
+| data[].tags | array | 资源关联的标签数组 |
+| data[].upload_time | string | 上传时间 |
+| data[].uploader | string | 上传者姓名或 ID |
+- **响应示例**:
 ```json
 {
   "code": 200,
@@ -281,7 +431,31 @@
 ### 6.2 上传资源
 - **路径**: `POST /media/upload`
 - **请求格式**: `multipart/form-data`
-- **参数**: `file` (文件流), `tags` (标签数组), `description" (说明)
+- **请求参数说明**:
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| file | file | 是 | 待上传的文件流 |
+| tags | array | 否 | 关联标签数组 |
+| description | string | 否 | 资源详细说明 |
+- **响应示例**:
+```json
+{
+  "code": 200,
+  "message": "上传成功",
+  "data": {
+    "id": "media-2",
+    "url": "..."
+  }
+}
+```
 
 ### 6.3 删除资源
 - **路径**: `DELETE /media/{id}`
+- **响应示例**:
+```json
+{
+  "code": 200,
+  "message": "资源已成功删除"
+}
+```
+
