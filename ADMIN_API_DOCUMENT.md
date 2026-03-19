@@ -143,34 +143,49 @@
 | search | string | 否 | 搜索关键词（故障代码或类别名称） |
 | device_id | string | 否 | 关联的机台 ID |
 | fault_category | string | 否 | 故障类别 |
+| page | number | 否 | 当前页码，默认 1 |
+| limit | number | 否 | 每页条数，默认 10 |
+- **请求示例**:
+`GET /api/admin/guides?page=1&limit=10&search=E102`
 - **响应参数说明**:
 | 字段 | 类型 | 说明 |
 | :--- | :--- | :--- |
 | code | number | 状态码 |
-| data[].id | string | SOP 唯一 ID |
-| data[].device_id | string | 关联机台 ID |
-| data[].fault_code | string | 故障代码 (Error Code) |
-| data[].fault_category | string | 故障类别 |
-| data[].operation_type | string | 操作类型（如：校准、更换、清洁） |
-| data[].version | string | 版本号 |
-| data[].published | boolean | 是否已发布 |
-| data[].total_occurrence_count | number | 累计发生次数统计 |
+| data.list[] | array | SOP 列表数据 |
+| data.list[].id | string | SOP 唯一 ID |
+| data.list[].device_id | string | 关联机台 ID |
+| data.list[].fault_code | string | 故障代码 (Error Code) |
+| data.list[].fault_category | string | 故障类别 |
+| data.list[].operation_type | string | 操作类型（如：校准、更换、清洁） |
+| data.list[].version | string | 版本号 |
+| data.list[].published | boolean | 是否已发布 |
+| data.list[].total_occurrence_count | number | 累计发生次数统计 |
+| data.pagination.total | number | 总记录数 |
+| data.pagination.page | number | 当前页码 |
+| data.pagination.limit | number | 每页条数 |
 - **响应示例**:
 ```json
 {
   "code": 200,
-  "data": [
-    {
-      "id": "uuid-1",
-      "device_id": "device-001",
-      "fault_code": "E102",
-      "fault_category": "光路系统",
-      "operation_type": "校准",
-      "version": "V1.2",
-      "published": true,
-      "total_occurrence_count": 128
+  "data": {
+    "list": [
+      {
+        "id": "uuid-1",
+        "device_id": "device-001",
+        "fault_code": "E102",
+        "fault_category": "光路系统",
+        "operation_type": "校准",
+        "version": "V1.2",
+        "published": true,
+        "total_occurrence_count": 128
+      }
+    ],
+    "pagination": {
+      "total": 128,
+      "page": 1,
+      "limit": 10
     }
-  ]
+  }
 }
 ```
 
