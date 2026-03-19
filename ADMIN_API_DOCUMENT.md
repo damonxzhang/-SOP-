@@ -10,9 +10,52 @@
 
 ---
 
-## 1. 统计看板 (Dashboard)
+## 1. 身份认证 (Authentication)
 
-### 1.1 获取概览统计数据
+### 1.1 用户登录
+- **路径**: `POST /auth/login`
+- **请求体**:
+```json
+{
+  "username": "admin",
+  "password": "hashed_password",
+  "login_type": "standard"
+}
+```
+- **响应**:
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "token": "jwt_token_string",
+    "expire_at": "2026-03-20 10:00:00",
+    "user_info": {
+      "id": "user-1",
+      "name": "管理员",
+      "role": "ADMIN",
+      "avatar": "url"
+    }
+  }
+}
+```
+
+### 1.2 用户登出
+- **路径**: `POST /auth/logout`
+- **请求体**: 空
+- **响应**:
+```json
+{
+  "code": 200,
+  "message": "已成功退出登录"
+}
+```
+
+---
+
+## 2. 统计看板 (Dashboard)
+
+### 2.1 获取概览统计数据
 - **路径**: `GET /stats/overview`
 - **响应**:
 ```json
@@ -30,7 +73,7 @@
 }
 ```
 
-### 1.2 获取故障趋势分布 (近7日)
+### 2.2 获取故障趋势分布 (近7日)
 - **路径**: `GET /stats/fault_trend`
 - **响应**:
 ```json
@@ -48,7 +91,7 @@
 }
 ```
 
-### 1.3 获取 MTTR 预测数据
+### 2.3 获取 MTTR 预测数据
 - **路径**: `GET /stats/mttr_prediction`
 - **响应**:
 ```json
@@ -63,9 +106,9 @@
 
 ---
 
-## 2. SOP 库管理 (SOP Library)
+## 3. SOP 库管理 (SOP Library)
 
-### 2.1 获取 SOP 列表
+### 3.1 获取 SOP 列表
 - **路径**: `GET /guides`
 - **查询参数**:
   - `search`: 搜索关键词（故障代码或类别）
@@ -90,7 +133,7 @@
 }
 ```
 
-### 2.2 获取 SOP 详情
+### 3.2 获取 SOP 详情
 - **路径**: `GET /guides/{id}`
 - **响应**:
 ```json
@@ -118,16 +161,16 @@
 }
 ```
 
-### 2.3 保存/更新 SOP
+### 3.3 保存/更新 SOP
 - **路径**: `POST /guides` (新增) 或 `PUT /guides/{id}` (更新)
 - **请求体**: 同获取详情的 data 结构
 - **响应**: `{ "code": 200, "message": "保存成功", "data": { "id": "..." } }`
 
 ---
 
-## 3. 工程师管理 (User Management)
+## 4. 工程师管理 (User Management)
 
-### 3.1 获取工程师列表
+### 4.1 获取工程师列表
 - **路径**: `GET /users`
 - **响应**:
 ```json
@@ -153,7 +196,7 @@
 }
 ```
 
-### 3.2 更新工程师信息/权限
+### 4.2 更新工程师信息/权限
 - **路径**: `PUT /users/{id}`
 - **请求体**:
 ```json
@@ -170,9 +213,9 @@
 
 ---
 
-## 4. 现场提问记录 (Inquiries)
+## 5. 现场提问记录 (Inquiries)
 
-### 4.1 获取提问列表
+### 5.1 获取提问列表
 - **路径**: `GET /inquiries`
 - **查询参数**: `status` (pending/resolved), `fault_code`
 - **响应**:
@@ -199,7 +242,7 @@
 }
 ```
 
-### 4.2 回复并处理提问
+### 5.2 回复并处理提问
 - **路径**: `POST /inquiries/{id}/resolve`
 - **请求体**:
 ```json
@@ -211,9 +254,9 @@
 
 ---
 
-## 5. 多媒体资料库 (Media Library)
+## 6. 多媒体资料库 (Media Library)
 
-### 5.1 获取资源列表
+### 6.1 获取资源列表
 - **路径**: `GET /media`
 - **查询参数**: `type` (image/video/pdf/doc), `search`
 - **响应**:
@@ -235,10 +278,10 @@
 }
 ```
 
-### 5.2 上传资源
+### 6.2 上传资源
 - **路径**: `POST /media/upload`
 - **请求格式**: `multipart/form-data`
-- **参数**: `file` (文件流), `tags` (标签数组), `description` (说明)
+- **参数**: `file` (文件流), `tags` (标签数组), `description" (说明)
 
-### 5.3 删除资源
+### 6.3 删除资源
 - **路径**: `DELETE /media/{id}`
