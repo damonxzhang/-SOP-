@@ -75,6 +75,17 @@ const App: React.FC = () => {
                 
                 <button 
                   onClick={() => {
+                    setViewMode(viewMode === 'APP' ? 'ADMIN' : 'APP');
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50"
+                >
+                  {viewMode === 'APP' ? <Shield size={18} className="text-blue-600" /> : <Smartphone size={18} className="text-blue-600" />}
+                  <span className="font-semibold">{viewMode === 'APP' ? '切换至管理后台' : '切换至 PDA 端'}</span>
+                </button>
+                
+                <button 
+                  onClick={() => {
                     setShowUserMenu(false);
                     if(confirm('确定要退出登录吗？')) {
                       setCurrentUser(null);
