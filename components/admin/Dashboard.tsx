@@ -1,5 +1,5 @@
-import React from 'react'
-import { Clock, BadgeCheck, MessageCircleCode, BarChart3 } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Clock, BadgeCheck, MessageCircleCode, BarChart3, Volume2, AlertOctagon } from 'lucide-react'
 import {
   ResponsiveContainer,
   AreaChart,
@@ -9,15 +9,86 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
-import { StepInquiry } from '../../types'
+import { StepInquiry, PartAlertStatus } from '../../types'
+import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from './pmShared'
 
 interface DashboardProps {
   inquiries: StepInquiry[]
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ inquiries }) => {
+  // ============ 过期备件语音播报（与预防性维护同源数据） ============
+  const [alertStatuses] = useState<PartAlertStatus[]>(() => computeAlertStatuses(MOCK_RECORDS, MOCK_PARTS))
+  const [toast, setToast] = useState<string | null>(null)
+
+  const redAlerts = alertStatuses.filter((a) => a.level === 'red')
+
+  const redAlertsRef = useRef<PartAlertStatus[]>([])
+  redAlertsRef.current = redAlerts
+
+  const speakRedAlerts = () => {
+    const list = redAlertsRef.current
+    if (list.length === 0) return
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setToast('当前浏览器不支持语音播报')
+      return
+    }
+    const texts = list.map((a) => `设备${a.deviceNo}的${a.partName}，已超期${Math.abs(a.remainDays)}天`)
+    const speech = `警告！检测到${list.length}个备件已过期。${texts.join('。')}。请立即安排更换！`
+    window.speechSynthesis.cancel()
+    const utter = new SpeechSynthesisUtterance(speech)
+    utter.lang = 'zh-CN'
+    utter.rate = 0.9
+    utter.pitch = 1
+    window.speechSynthesis.speak(utter)
+    setToast('已语音播报过期备件提醒')
+  }
+
+  // 检测到红牌时自动播报（首次进入或红牌数量变化时触发，避免重复播报）
+  const lastAnnouncedCountRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (redAlerts.length === 0) {
+      lastAnnouncedCountRef.current = null
+      return
+    }
+    if (lastAnnouncedCountRef.current !== redAlerts.length) {
+      lastAnnouncedCountRef.current = redAlerts.length
+      speakRedAlerts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [redAlerts.length])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [toast])
+
   return (
     <div className='space-y-6 animate-in fade-in duration-500'>
+      {redAlerts.length > 0 && (
+        <div className='bg-rose-50 border-2 border-rose-200 rounded-[2rem] px-6 py-4 flex items-center justify-between gap-4 animate-pulse'>
+          <div className='flex items-center space-x-3'>
+            <div className='p-2.5 bg-rose-600 text-white rounded-2xl'><AlertOctagon size={20} /></div>
+            <div>
+              <p className='text-sm font-black text-rose-700'>
+                检测到 {redAlerts.length} 个备件已过期
+              </p>
+              <p className='text-[10px] font-bold text-rose-500'>
+                {redAlerts.map((a) => `${a.deviceNo} · ${a.partName}`).join('，')}，请立即安排更换
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={speakRedAlerts}
+            title='语音播报过期备件'
+            className='flex items-center space-x-1.5 px-3 py-2.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 active:scale-95 transition-all shadow-lg shadow-rose-200 shrink-0'>
+            <Volume2 size={15} />
+            <span className='text-[10px] font-black'>语音播报</span>
+          </button>
+        </div>
+      )}
+
       <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
         <div className='bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col items-center text-center'>
           <div className='p-4 bg-blue-50 rounded-[1.5rem] text-blue-600 mb-4'>
@@ -122,6 +193,12 @@ const Dashboard: React.FC<DashboardProps> = ({ inquiries }) => {
           </div>
         </div>
       </div>
+
+      {toast && (
+        <div className='fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xl'>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

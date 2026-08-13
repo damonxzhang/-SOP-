@@ -99,6 +99,7 @@ import UserManagement from '../../components/admin/UserManagement'
 import PersonalInfo from '../../components/admin/PersonalInfo'
 import EmailInbox from '../../components/admin/EmailInbox'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
+import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from '../../components/admin/pmShared'
 
 const STAGES: ProcessStage[] = [
   '准备阶段',
@@ -259,6 +260,11 @@ const MOCK_INQUIRIES: StepInquiry[] = [
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('统计看板')
+  // 过期备件数量（红牌），用于侧边栏角标展示
+  const expiredCount = useMemo(
+    () => computeAlertStatuses(MOCK_RECORDS, MOCK_PARTS).filter((a) => a.level === 'red').length,
+    []
+  )
   const [guides, setGuides] = useState<MaintenanceGuide[]>([])
   const [devices, setDevices] = useState<Device[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -2698,6 +2704,11 @@ const AdminDashboard: React.FC = () => {
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${activeTab === item.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}>
               {item.icon}
               <span>{item.label}</span>
+              {item.id === '预防性维护管理' && expiredCount > 0 && (
+                <span className='ml-auto flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-600 text-white text-[11px] font-black shadow-sm'>
+                  {expiredCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
