@@ -55,13 +55,13 @@ export const MOCK_LOGS: ThresholdAdjustLog[] = [
 
 // ================= 工具函数 =================
 
-const dayDiff = (from: string, to: string): number => {
+export const dayDiff = (from: string, to: string): number => {
   const d1 = new Date(from + 'T00:00:00').getTime()
   const d2 = new Date(to + 'T00:00:00').getTime()
   return Math.round((d2 - d1) / 86400000)
 }
 
-const dayDiffToToday = (dateStr: string): number => {
+export const dayDiffToToday = (dateStr: string): number => {
   const d1 = new Date(dateStr + 'T00:00:00').getTime()
   return Math.max(0, Math.floor((Date.now() - d1) / 86400000))
 }

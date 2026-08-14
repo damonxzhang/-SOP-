@@ -44,6 +44,8 @@ import {
   MOCK_LOGS,
   todayStr,
   nowStr,
+  dayDiff,
+  dayDiffToToday,
   computeAlertStatuses
 } from './pmShared'
 
