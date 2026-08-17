@@ -60,7 +60,8 @@ import {
   MessageCircleCode,
   Camera,
   Calendar,
-  Wrench
+  Wrench,
+  Volume2
 } from 'lucide-react'
 import {
   MaintenanceGuide,
@@ -100,6 +101,7 @@ import PersonalInfo from '../../components/admin/PersonalInfo'
 import EmailInbox from '../../components/admin/EmailInbox'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
 import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from '../../components/admin/pmShared'
+import { isAutoSpeakEnabled, setAutoSpeakEnabled, notifyAutoSpeakChanged } from '../../components/admin/autoSpeak'
 
 const STAGES: ProcessStage[] = [
   '准备阶段',
@@ -265,6 +267,14 @@ const AdminDashboard: React.FC = () => {
     () => computeAlertStatuses(MOCK_RECORDS, MOCK_PARTS).filter((a) => a.level === 'red').length,
     []
   )
+  // 语音自动播报开关（默认关闭）
+  const [autoSpeak, setAutoSpeak] = useState<boolean>(() => isAutoSpeakEnabled())
+  const handleToggleAutoSpeak = () => {
+    const next = !autoSpeak
+    setAutoSpeak(next)
+    setAutoSpeakEnabled(next)
+    notifyAutoSpeakChanged()
+  }
   const [guides, setGuides] = useState<MaintenanceGuide[]>([])
   const [devices, setDevices] = useState<Device[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -2711,6 +2721,27 @@ const AdminDashboard: React.FC = () => {
               )}
             </button>
           ))}
+          <div className='pt-3 mt-3 border-t border-slate-100'>
+            <button
+              onClick={handleToggleAutoSpeak}
+              title='控制是否在检测到过期备件时自动语音播报'
+              className='w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition hover:bg-slate-50'>
+              <span className='flex items-center space-x-3 text-sm font-semibold text-slate-600'>
+                <Volume2 size={18} />
+                <span>语音自动播报</span>
+              </span>
+              <span
+                className={`relative inline-flex w-10 h-[22px] rounded-full transition-colors shrink-0 ${
+                  autoSpeak ? 'bg-emerald-500' : 'bg-slate-200'
+                }`}>
+                <span
+                  className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
+                    autoSpeak ? 'left-[20px]' : 'left-[2px]'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
         </div>
       </aside>
 

@@ -48,6 +48,7 @@ import {
   dayDiffToToday,
   computeAlertStatuses
 } from './pmShared'
+import { isAutoSpeakEnabled, subscribeAutoSpeak } from './autoSpeak'
 
 // ================= 主组件 =================
 
@@ -124,10 +125,10 @@ const PreventiveMaintenance: React.FC = () => {
     setToast('已语音播报过期备件提醒')
   }
 
-  // 检测到红牌时自动播报（首次进入或红牌数量变化时触发，避免重复播报）
+  // 检测到红牌时自动播报（需在后台开启「语音自动播报」开关；红牌数量变化时触发，避免重复播报）
   const lastAnnouncedCountRef = useRef<number | null>(null)
   useEffect(() => {
-    if (redAlerts.length === 0) {
+    if (!isAutoSpeakEnabled() || redAlerts.length === 0) {
       lastAnnouncedCountRef.current = null
       return
     }
@@ -137,6 +138,19 @@ const PreventiveMaintenance: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redAlerts.length])
+
+  // 监听后台开关变化：开启时若存在红牌立即播报，关闭时取消正在播放的语音
+  useEffect(() => {
+    return subscribeAutoSpeak(() => {
+      if (isAutoSpeakEnabled()) {
+        lastAnnouncedCountRef.current = null
+        if (redAlertsRef.current.length > 0) speakRedAlerts()
+      } else if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 红牌持续弹窗：存在红牌且未被忽略时展示；红牌数量变化时重新触发
   useEffect(() => {
