@@ -55,7 +55,6 @@ const EngineerApp: React.FC = () => {
   const [step, setStep] = useState<
     | 'APP_LOGIN'
     | 'SCAN'
-    | 'SCANNING_UI'
     | 'ALARM_SELECT'
     | 'STEP_LIST'
     | 'GUIDE'
@@ -63,8 +62,8 @@ const EngineerApp: React.FC = () => {
     | 'SUBMIT_INQUIRY'
     | 'REPAIR_DETAIL'
     | 'FINAL_SUBMIT'
-  >('APP_LOGIN')
-  const [isAppAuthenticated, setIsAppAuthenticated] = useState(false)
+  >('SCAN')
+  const [isAppAuthenticated, setIsAppAuthenticated] = useState(true)
   const [isRfidScanning, setIsRfidScanning] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const [selectedGuide, setSelectedGuide] = useState<MaintenanceGuide | null>(
@@ -164,17 +163,6 @@ const EngineerApp: React.FC = () => {
   }, [step, viewingRequest, selectedDevice])
 
   const [showAllAlarms, setShowAllAlarms] = useState(false) // 新增：是否显示全部报警代码
-
-  // 模拟扫码识别过程
-  useEffect(() => {
-    if (step === 'SCANNING_UI') {
-      const timer = setTimeout(() => {
-        setSelectedDevice(MOCK_DEVICES[0])
-        setStep('ALARM_SELECT')
-      }, 3500)
-      return () => clearTimeout(timer)
-    }
-  }, [step])
 
   const authorizedDevices = useMemo(() => {
     return MOCK_DEVICES.filter((d) =>
@@ -421,7 +409,10 @@ const EngineerApp: React.FC = () => {
               <Microscope className='mr-2 text-blue-600' size={18} /> 资产识别
             </h2>
             <button
-              onClick={() => setStep('SCANNING_UI')}
+              onClick={() => {
+                setSelectedDevice(MOCK_DEVICES[0])
+                setStep('ALARM_SELECT')
+              }}
               className='w-full flex flex-col items-center justify-center p-12 bg-blue-600 rounded-3xl hover:bg-blue-700 transition shadow-xl shadow-blue-100 text-white'>
               <QrCode className='w-12 h-12 mb-3' />
               <span className='text-sm font-black'>扫描资产二维码</span>
@@ -459,47 +450,6 @@ const EngineerApp: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-      )
-    }
-
-    if (step === 'SCANNING_UI') {
-      return (
-        <div className='absolute inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500'>
-          <div className='relative w-64 h-64 border-2 border-white/20 rounded-3xl overflow-hidden flex items-center justify-center'>
-            <div className='absolute inset-0 bg-gradient-to-b from-blue-900/10 to-indigo-900/20'></div>
-            <div className='absolute top-4 left-4 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl-sm'></div>
-            <div className='absolute top-4 right-4 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr-sm'></div>
-            <div className='absolute bottom-4 left-4 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl-sm'></div>
-            <div className='absolute bottom-4 right-4 w-6 h-6 border-b-4 border-r-4 border-blue-500 rounded-br-sm'></div>
-            <div className='absolute top-0 left-0 right-0 h-1 bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-[scanLine_2s_infinite_linear]'></div>
-            <div className='z-10 text-center space-y-2'>
-              <QrCode size={48} className='text-white mx-auto opacity-40' />
-              <p className='text-[10px] font-black text-blue-400 uppercase tracking-widest animate-pulse'>
-                对准二维码中心...
-              </p>
-            </div>
-          </div>
-          <div className='mt-12 text-center space-y-4'>
-            <h3 className='text-white font-bold text-lg'>资产自动对焦中</h3>
-            <p className='text-slate-400 text-[11px] leading-relaxed max-w-[200px] mx-auto'>
-              系统正在连接资产数据库，自动识别机台履历与维护权限。
-            </p>
-            <button
-              onClick={() => {
-                setSelectedDevice(MOCK_DEVICES[0])
-                setStep('ALARM_SELECT')
-              }}
-              className='px-6 py-2 bg-white/10 text-white/50 rounded-full text-[10px] font-bold border border-white/10 hover:bg-white/20 transition-all'>
-              跳过模拟识别
-            </button>
-          </div>
-          <button
-            onClick={() => setStep('SCAN')}
-            className='absolute bottom-10 p-4 bg-white/10 text-white rounded-full'>
-            <X size={24} />
-          </button>
-          <style>{` @keyframes scanLine { 0% { top: 10%; } 100% { top: 90%; } } `}</style>
         </div>
       )
     }
