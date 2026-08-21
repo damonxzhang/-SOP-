@@ -1047,6 +1047,11 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                             <AlertOctagon size={11} className='mr-1' /> {r}
                           </span>
                         ))}
+                        <button
+                          onClick={() => {}}
+                          className='inline-flex items-center px-3.5 py-1.5 bg-violet-600 text-white rounded-lg text-[10px] font-black hover:bg-violet-700 transition-all active:scale-95'>
+                          <Plus size={12} className='mr-1' /> 添加到周期预测中
+                        </button>
                       </div>
                     </div>
 
