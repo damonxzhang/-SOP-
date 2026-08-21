@@ -75,6 +75,7 @@ import {
   Device,
   EmailNotification
 } from '../../types'
+import { REPAIR_OPTIONS_BY_MODEL, DEFAULT_REPAIR_OPTIONS } from '../../constants'
 import {
   BarChart,
   Bar,
@@ -100,6 +101,7 @@ import UserManagement from '../../components/admin/UserManagement'
 import PersonalInfo from '../../components/admin/PersonalInfo'
 import EmailInbox from '../../components/admin/EmailInbox'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
+import SOPUsageRecord from '../../components/admin/SOPUsageRecord'
 import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from '../../components/admin/pmShared'
 import { isAutoSpeakEnabled, setAutoSpeakEnabled, notifyAutoSpeakChanged } from '../../components/admin/autoSpeak'
 
@@ -611,6 +613,11 @@ const AdminDashboard: React.FC = () => {
       label: '预防性维护管理'
     },
     {
+      id: 'SOP 库的使用记录',
+      icon: <History size={18} />,
+      label: 'SOP 库的使用记录'
+    },
+    {
       id: '多媒体资料库',
       icon: <HardDrive size={18} />,
       label: '多媒体资料库'
@@ -988,7 +995,11 @@ const AdminDashboard: React.FC = () => {
           />
         )
       case '预防性维护管理':
-        return <PreventiveMaintenance />
+        return <PreventiveMaintenance isAdmin={currentUser?.role === Role.ADMIN} />
+      case 'SOP 库的使用记录':
+        return (
+          <SOPUsageRecord guides={guides} devices={devices} users={users} />
+        )
       case '多媒体资料库':
         return (
           <MediaLibrary
@@ -1958,6 +1969,54 @@ const AdminDashboard: React.FC = () => {
                   <select className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'>
                     <option value='normal'>普通报修</option>
                     <option value='emergency'>紧急报修</option>
+                  </select>
+                </div>
+                <div className='space-y-1'>
+                  <span className='text-[10px] text-slate-400 font-black uppercase'>
+                    维修位置
+                  </span>
+                  <select
+                    className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'
+                    value={editingGuide.repairLocation || ''}
+                    onChange={(e) =>
+                      setEditingGuide({
+                        ...editingGuide,
+                        repairLocation: e.target.value
+                      })
+                    }>
+                    <option value=''>请选择维修位置</option>
+                    {(REPAIR_OPTIONS_BY_MODEL[
+                      devices.find((d) => d.id === editingGuide.deviceId)
+                        ?.model || ''
+                    ] || DEFAULT_REPAIR_OPTIONS).locations.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className='space-y-1'>
+                  <span className='text-[10px] text-slate-400 font-black uppercase'>
+                    维修内容
+                  </span>
+                  <select
+                    className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'
+                    value={editingGuide.repairContent || ''}
+                    onChange={(e) =>
+                      setEditingGuide({
+                        ...editingGuide,
+                        repairContent: e.target.value
+                      })
+                    }>
+                    <option value=''>请选择维修内容</option>
+                    {(REPAIR_OPTIONS_BY_MODEL[
+                      devices.find((d) => d.id === editingGuide.deviceId)
+                        ?.model || ''
+                    ] || DEFAULT_REPAIR_OPTIONS).contents.map((ct) => (
+                      <option key={ct} value={ct}>
+                        {ct}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

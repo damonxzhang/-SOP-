@@ -93,6 +93,36 @@ export const MOCK_DEVICES: Device[] = [
   { id: 'd4', type: '离子注入', model: 'Varian VIISta', subModel: '高能注入', sn: 'VII-STA-042', status: 'active', boundSopIds: [] },
 ];
 
+// 维修位置 / 维修内容 与 设备+工序机型 的联动配置
+// key 为设备 model（型号），每类设备包含可选维修位置与维修内容
+export const REPAIR_OPTIONS_BY_MODEL: Record<
+  string,
+  { locations: string[]; contents: string[] }
+> = {
+  'NXT:2050i': {
+    locations: ['光源单元', '对准系统', '工件台', '浸没单元'],
+    contents: ['更换传感器', '清洁透镜', '校准对准', '更换光源模组']
+  },
+  'Versys Kiyo45': {
+    locations: ['反应腔体', '传输腔体', '电极组件', '气路单元'],
+    contents: ['更换静电卡盘', '清洁腔体', '更换电极', '更换过滤器']
+  },
+  'Producer GT': {
+    locations: ['沉积腔体', '加热器', '气体分配板', '真空泵组'],
+    contents: ['更换加热器', '清洁喷淋头', '更换气板', '更换真空泵']
+  },
+  'Varian VIISta': {
+    locations: ['离子源', '加速管', '扫描台', '束流线'],
+    contents: ['更换灯丝', '校准束流', '更换离子源', '更换抑制器']
+  }
+};
+
+// 默认兜底选项（设备未配置时使用）
+export const DEFAULT_REPAIR_OPTIONS = {
+  locations: ['主单元', '辅助单元', '现场工位'],
+  contents: ['更换备件', '清洁保养', '校准调试', '软件升级']
+};
+
 export const MOCK_USER: User = {
   id: 'u1',
   name: '陈工程师',
@@ -255,7 +285,9 @@ export const MOCK_RECORDS: RepairRecord[] = [
     treatment: '正在按 SOP 流程进行传感器清洗...',
     photos: [],
     completedSteps: ['s1'],
-    status: 'ongoing'
+    status: 'ongoing',
+    repairOrderNo: 'BX-20260211-001',
+    maintenanceOrderNo: 'WX-20260211-001'
   },
   {
     id: 'r1',
@@ -267,7 +299,9 @@ export const MOCK_RECORDS: RepairRecord[] = [
     treatment: '导轨深度清洁，更换二级滤芯。',
     photos: ['https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&q=80&w=400'],
     completedSteps: ['s1', 's2', 's3'],
-    status: 'completed'
+    status: 'completed',
+    repairOrderNo: 'BX-20250510-003',
+    maintenanceOrderNo: 'WX-20250510-003'
   },
   {
     id: 'r2',
@@ -279,7 +313,9 @@ export const MOCK_RECORDS: RepairRecord[] = [
     treatment: '使用无尘布清洁。',
     photos: [],
     completedSteps: ['s1', 's2'],
-    status: 'completed'
+    status: 'completed',
+    repairOrderNo: 'BX-20250420-007',
+    maintenanceOrderNo: 'WX-20250420-007'
   },
   {
     id: 'r3',
@@ -291,7 +327,9 @@ export const MOCK_RECORDS: RepairRecord[] = [
     treatment: '更换全新密封圈。',
     photos: [],
     completedSteps: ['g2s1', 'g2s2'],
-    status: 'completed'
+    status: 'completed',
+    repairOrderNo: 'BX-20250512-001',
+    maintenanceOrderNo: 'WX-20250512-001'
   }
 ];
 

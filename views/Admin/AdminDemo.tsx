@@ -87,6 +87,7 @@ import {
   MediaResource,
   Device
 } from '../../types'
+import { REPAIR_OPTIONS_BY_MODEL, DEFAULT_REPAIR_OPTIONS } from '../../constants'
 
 const STAGES: ProcessStage[] = [
   '准备阶段',
@@ -2319,6 +2320,54 @@ const AdminDashboard: React.FC = () => {
                     <select className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'>
                       <option value='normal'>普通报修</option>
                       <option value='emergency'>紧急报修</option>
+                    </select>
+                  </div>
+                  <div className='space-y-1'>
+                    <span className='text-[10px] text-slate-400 font-black uppercase'>
+                      维修位置
+                    </span>
+                    <select
+                      className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'
+                      value={editingGuide.repairLocation || ''}
+                      onChange={(e) =>
+                        setEditingGuide({
+                          ...editingGuide,
+                          repairLocation: e.target.value
+                        })
+                      }>
+                      <option value=''>请选择维修位置</option>
+                      {(REPAIR_OPTIONS_BY_MODEL[
+                        devices.find((d) => d.id === editingGuide.deviceId)
+                          ?.model || ''
+                      ] || DEFAULT_REPAIR_OPTIONS).locations.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className='space-y-1'>
+                    <span className='text-[10px] text-slate-400 font-black uppercase'>
+                      维修内容
+                    </span>
+                    <select
+                      className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'
+                      value={editingGuide.repairContent || ''}
+                      onChange={(e) =>
+                        setEditingGuide({
+                          ...editingGuide,
+                          repairContent: e.target.value
+                        })
+                      }>
+                      <option value=''>请选择维修内容</option>
+                      {(REPAIR_OPTIONS_BY_MODEL[
+                        devices.find((d) => d.id === editingGuide.deviceId)
+                          ?.model || ''
+                      ] || DEFAULT_REPAIR_OPTIONS).contents.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

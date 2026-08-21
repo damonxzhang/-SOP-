@@ -81,6 +81,8 @@ export interface MaintenanceGuide {
   steps: GuideStep[];
   published: boolean;
   totalOccurrenceCount?: number; // 新增：该故障代码历史总发生次数
+  repairLocation?: string; // 新增：维修位置（与关联设备/工序机型联动）
+  repairContent?: string;  // 新增：维修内容（与关联设备/工序机型联动）
 }
 
 export interface RepairRecord {
@@ -95,6 +97,9 @@ export interface RepairRecord {
   completedSteps: string[];
   status: 'ongoing' | 'completed';
   submissionSource?: 'CLOSE' | 'PASS';
+  // 新增：报修单号 / 维修单号（用于从 SOP 使用记录反查原始单据）
+  repairOrderNo?: string;
+  maintenanceOrderNo?: string;
   // 新增：反馈上下文
   context?: {
     deviceId: string;

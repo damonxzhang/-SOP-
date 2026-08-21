@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
-  QrCode,
   ChevronRight,
   ArrowLeft,
-  Microscope,
   Cpu,
   PlayCircle,
   Play,
@@ -17,6 +15,7 @@ import {
   Info,
   Tag,
   Search,
+  ChevronDown,
   AlertCircle,
   FileSearch,
   AlertTriangle,
@@ -34,10 +33,13 @@ import {
   Clock,
   BadgeAlert,
   Layers,
-  Home,
   User as UserIcon,
   LogOut,
-  Radio
+  Radio,
+  Package,
+  LayoutGrid,
+  Bell,
+  Plus
 } from 'lucide-react'
 import {
   MOCK_DEVICES,
@@ -51,10 +53,11 @@ import {
 import { Device, MaintenanceGuide, GuideStep, RepairRecord } from '../../types'
 
 const EngineerApp: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'HOME' | 'PROFILE'>('HOME')
+  const [activeTab, setActiveTab] = useState<'HOME' | 'MESSAGE' | 'PROFILE'>('HOME')
   const [step, setStep] = useState<
     | 'APP_LOGIN'
-    | 'SCAN'
+    | 'DASHBOARD'
+    | 'DEVICE_DETAIL'
     | 'ALARM_SELECT'
     | 'STEP_LIST'
     | 'GUIDE'
@@ -62,7 +65,9 @@ const EngineerApp: React.FC = () => {
     | 'SUBMIT_INQUIRY'
     | 'REPAIR_DETAIL'
     | 'FINAL_SUBMIT'
-  >('SCAN')
+    | 'REPAIR_REPORT'
+  >('DASHBOARD')
+  const [dashboardTab, setDashboardTab] = useState<'EQUIPMENT' | 'PM'>('EQUIPMENT')
   const [isAppAuthenticated, setIsAppAuthenticated] = useState(true)
   const [isRfidScanning, setIsRfidScanning] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
@@ -106,30 +111,37 @@ const EngineerApp: React.FC = () => {
   const [viewingRequest, setViewingRequest] = useState<any>(null) // 新增：查看中的报修申请
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
   const [alarmSearchQuery, setAlarmSearchQuery] = useState('') // 新增：报警搜索关键词
+  const [selectedFaultCode, setSelectedFaultCode] = useState('') // 选中的报警代码
+  const [selectedFaultCategory, setSelectedFaultCategory] = useState('') // 选中的报警内容
+  const [repairLocation, setRepairLocation] = useState('') // 新增：维修位置
+  const [repairContent, setRepairContent] = useState('') // 新增：维修内容
+  const [repairStatus, setRepairStatus] = useState('维修中') // 新增：维修状态
   const [devices, setDevices] = useState<Device[]>([]) // 从 API 获取的设备列表
   const [guides, setGuides] = useState<MaintenanceGuide[]>([]) // 从 API 获取的 SOP 指南列表
   const [isLoading, setIsLoading] = useState(false) // 加载状态
 
-  // 监听进入 ALARM_SELECT 步骤，并根据是否有选中的报修申请自动填入搜索关键词
+  // 监听进入 ALARM_SELECT 步骤，并根据是否有选中的报修申请自动填入下拉框
   useEffect(() => {
     if (step === 'ALARM_SELECT') {
       if (viewingRequest) {
-        // 从报修申请关联的 MOCK_GUIDES 中找到对应的 scope (维修类型)
+        // 从报修申请关联的 MOCK_GUIDES 中找到对应的指南并自动填入
         const guide = MOCK_GUIDES.find(
           (g) =>
             g.deviceId === viewingRequest.deviceId &&
             g.faultCode === viewingRequest.faultCode
         )
-        if (guide?.scope) {
-          setAlarmSearchQuery(guide.scope)
+        if (guide) {
+          setSelectedFaultCode(guide.faultCode || '')
+          setSelectedFaultCategory(guide.faultCategory || '')
         }
       } else if (selectedDevice) {
-        // 如果没有特定的报修申请，但识别到了设备（如通过“跳过模拟识别”或正常扫描），则默认填入该设备的一个维修类型
+        // 如果没有特定的报修申请，但识别到了设备，则默认填入该设备第一个指南
         const firstGuide = MOCK_GUIDES.find(
           (g) => g.deviceId === selectedDevice.id
         )
-        if (firstGuide?.scope) {
-          setAlarmSearchQuery(firstGuide.scope)
+        if (firstGuide) {
+          setSelectedFaultCode(firstGuide.faultCode || '')
+          setSelectedFaultCategory(firstGuide.faultCategory || '')
         }
         // 从 API 获取该设备的 SOP 指南列表
         const fetchGuides = async () => {
@@ -156,9 +168,11 @@ const EngineerApp: React.FC = () => {
         }
         fetchGuides()
       }
-    } else if (step === 'SCAN') {
-      // 重置搜索关键词
+    } else if (step === 'DASHBOARD') {
+      // 重置下拉框
       setAlarmSearchQuery('')
+      setSelectedFaultCode('')
+      setSelectedFaultCategory('')
     }
   }, [step, viewingRequest, selectedDevice])
 
@@ -186,23 +200,39 @@ const EngineerApp: React.FC = () => {
         ? guides
         : MOCK_GUIDES.filter((g) => g.deviceId === selectedDevice.id)
 
-    if (alarmSearchQuery.trim()) {
-      const query = alarmSearchQuery.toLowerCase()
+    // 按报警代码过滤
+    if (selectedFaultCode) {
+      baseList = baseList.filter((g) => g.faultCode === selectedFaultCode)
+    }
+    // 按报警内容过滤
+    if (selectedFaultCategory) {
       baseList = baseList.filter(
-        (g) =>
-          g.faultCode?.toLowerCase().includes(query) ||
-          false ||
-          g.faultCategory?.toLowerCase().includes(query) ||
-          false ||
-          g.scope?.toLowerCase().includes(query) ||
-          false
+        (g) => g.faultCategory === selectedFaultCategory
       )
     }
 
     return baseList.sort(
       (a, b) => (b.totalOccurrenceCount || 0) - (a.totalOccurrenceCount || 0)
     )
-  }, [selectedDevice, alarmSearchQuery, guides])
+  }, [selectedDevice, selectedFaultCode, selectedFaultCategory, guides])
+
+  // 当前设备下的报警代码选项
+  const alarmCodes = useMemo(() => {
+    const base =
+      guides.length > 0
+        ? guides
+        : MOCK_GUIDES.filter((g) => g.deviceId === selectedDevice?.id)
+    return [...new Set(base.map((g) => g.faultCode).filter(Boolean))]
+  }, [guides, selectedDevice])
+
+  // 当前设备下的报警内容选项
+  const alarmCategories = useMemo(() => {
+    const base =
+      guides.length > 0
+        ? guides
+        : MOCK_GUIDES.filter((g) => g.deviceId === selectedDevice?.id)
+    return [...new Set(base.map((g) => g.faultCategory).filter(Boolean))]
+  }, [guides, selectedDevice])
 
   // 分类报警代码（基于维修类型/Scope）
   const groupedAlarms = useMemo(() => {
@@ -318,7 +348,7 @@ const EngineerApp: React.FC = () => {
                 setTimeout(() => {
                   setIsRfidScanning(false)
                   setIsAppAuthenticated(true)
-                  setStep('SCAN')
+                  setStep('DASHBOARD')
                 }, 2000)
               }}
               disabled={isRfidScanning}
@@ -352,106 +382,12 @@ const EngineerApp: React.FC = () => {
       )
     }
 
-    if (step === 'SCAN') {
-      return (
-        <div className='space-y-6 flex flex-col h-full animate-in fade-in duration-500'>
-          {ongoingRepair && (
-            <div className='bg-amber-50 p-5 rounded-2xl border border-amber-100 space-y-3 shadow-sm'>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center space-x-2'>
-                  <div className='p-1.5 bg-amber-500 text-white rounded-lg animate-pulse'>
-                    <AlertCircle size={14} />
-                  </div>
-                  <h4 className='text-xs font-black text-amber-900 uppercase'>
-                    当前维修任务
-                  </h4>
-                </div>
-                <span className='text-[9px] font-black bg-amber-200 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-widest'>
-                  进行中
-                </span>
-              </div>
+    if (step === 'DASHBOARD') {
+      return renderDashboard()
+    }
 
-              <div
-                className='flex items-start justify-between group cursor-pointer'
-                onClick={() => {
-                  setViewingRepairRecord(ongoingRepair)
-                  setStep('REPAIR_DETAIL')
-                }}>
-                <div>
-                  <h3 className='text-sm font-black text-slate-800'>
-                    {
-                      MOCK_DEVICES.find(
-                        (d) =>
-                          d.id ===
-                          MOCK_GUIDES.find(
-                            (g) => g.id === ongoingRepair.guideId
-                          )?.deviceId
-                      )?.model
-                    }
-                  </h3>
-                  <p className='text-[10px] text-amber-700/70 font-bold mt-0.5'>
-                    报警代码:{' '}
-                    {
-                      MOCK_GUIDES.find((g) => g.id === ongoingRepair.guideId)
-                        ?.faultCode
-                    }
-                  </p>
-                </div>
-                <div className='p-2 bg-white rounded-xl shadow-sm text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-all'>
-                  <ChevronRight size={16} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className='bg-white p-5 rounded-2xl shadow-sm border border-slate-200'>
-            <h2 className='text-lg font-bold mb-4 flex items-center'>
-              <Microscope className='mr-2 text-blue-600' size={18} /> 资产识别
-            </h2>
-            <button
-              onClick={() => {
-                setSelectedDevice(MOCK_DEVICES[0])
-                setStep('ALARM_SELECT')
-              }}
-              className='w-full flex flex-col items-center justify-center p-12 bg-blue-600 rounded-3xl hover:bg-blue-700 transition shadow-xl shadow-blue-100 text-white'>
-              <QrCode className='w-12 h-12 mb-3' />
-              <span className='text-sm font-black'>扫描资产二维码</span>
-            </button>
-          </div>
-          <div className='space-y-3 px-1 flex-1 overflow-y-auto scrollbar-hide'>
-            <h3 className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>
-              最近操作过的资产
-            </h3>
-            {authorizedDevices.map((d) => (
-              <div
-                key={d.id}
-                onClick={() => {
-                  setSelectedDevice(d)
-                  setStep('ALARM_SELECT')
-                }}
-                className='flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-blue-400 cursor-pointer shadow-sm group'>
-                <div className='flex items-center space-x-3'>
-                  <div className='p-2 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors'>
-                    <Cpu
-                      size={20}
-                      className='text-slate-400 group-hover:text-blue-500'
-                    />
-                  </div>
-                  <div>
-                    <p className='font-bold text-slate-800 text-sm'>
-                      {d.model}
-                    </p>
-                    <p className='text-[10px] font-mono text-slate-400 uppercase'>
-                      {d.sn}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight size={16} className='text-slate-300' />
-              </div>
-            ))}
-          </div>
-        </div>
-      )
+    if (step === 'DEVICE_DETAIL') {
+      return renderDeviceDetail()
     }
 
     if (step === 'ALARM_SELECT') {
@@ -459,7 +395,7 @@ const EngineerApp: React.FC = () => {
         <div className='space-y-5 animate-in slide-in-from-bottom-4 duration-500 pb-10'>
           <div className='flex items-center space-x-3 mb-2'>
             <button
-              onClick={() => setStep('SCAN')}
+              onClick={() => setStep('DASHBOARD')}
               className='p-2 bg-slate-100 rounded-full text-slate-500'>
               <ArrowLeft size={18} />
             </button>
@@ -487,18 +423,65 @@ const EngineerApp: React.FC = () => {
                   选择当前报警代码
                 </h4>
               </div>
-              {/* 搜索框 */}
+              {/* 报警代码下拉框 */}
+              <div className='grid grid-cols-2 gap-3'>
               <div className='relative'>
-                <div className='absolute inset-y-0 left-4 flex items-center pointer-events-none'>
-                  <Search size={14} className='text-slate-400' />
+                <select
+                  value={selectedFaultCode}
+                  onChange={(e) => {
+                    const code = e.target.value
+                    setSelectedFaultCode(code)
+                    // 选择报警代码后自动关联报警内容
+                    if (code) {
+                      const guide = (
+                        guides.length > 0
+                          ? guides
+                          : MOCK_GUIDES
+                      ).find((g) => g.faultCode === code)
+                      setSelectedFaultCategory(guide?.faultCategory || '')
+                    }
+                  }}
+                  className='w-full pl-4 pr-10 py-3 bg-white rounded-2xl border border-slate-100 text-[11px] font-bold outline-none focus:border-blue-400 transition-all shadow-sm appearance-none cursor-pointer'>
+                  <option value=''>请选择报警代码</option>
+                  {alarmCodes.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+                <div className='absolute inset-y-0 right-4 flex items-center pointer-events-none'>
+                  <ChevronDown size={14} className='text-slate-400' />
                 </div>
-                <input
-                  type='text'
-                  placeholder='搜索报警代码、维修类型或故障现象...'
-                  value={alarmSearchQuery}
-                  onChange={(e) => setAlarmSearchQuery(e.target.value)}
-                  className='w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-slate-100 text-[11px] font-bold outline-none focus:border-blue-400 transition-all shadow-sm'
-                />
+              </div>
+              {/* 报警内容下拉框 */}
+              <div className='relative'>
+                <select
+                  value={selectedFaultCategory}
+                  onChange={(e) => {
+                    const category = e.target.value
+                    setSelectedFaultCategory(category)
+                    // 选择报警内容后自动关联报警代码
+                    if (category) {
+                      const guide = (
+                        guides.length > 0
+                          ? guides
+                          : MOCK_GUIDES
+                      ).find((g) => g.faultCategory === category)
+                      setSelectedFaultCode(guide?.faultCode || '')
+                    }
+                  }}
+                  className='w-full pl-4 pr-10 py-3 bg-white rounded-2xl border border-slate-100 text-[11px] font-bold outline-none focus:border-blue-400 transition-all shadow-sm appearance-none cursor-pointer'>
+                  <option value=''>请选择报警内容</option>
+                  {alarmCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <div className='absolute inset-y-0 right-4 flex items-center pointer-events-none'>
+                  <ChevronDown size={14} className='text-slate-400' />
+                </div>
+              </div>
               </div>
             </div>
 
@@ -1416,7 +1399,7 @@ const EngineerApp: React.FC = () => {
         <div className='flex flex-col h-full animate-in slide-in-from-right-4 duration-300'>
           <div className='flex items-center justify-between py-2 border-b border-slate-100 mb-4 bg-slate-50 shrink-0'>
             <button
-              onClick={() => setStep('SCAN')}
+              onClick={() => setStep('DASHBOARD')}
               className='p-2 text-slate-500'>
               <ArrowLeft size={20} />
             </button>
@@ -1629,58 +1612,266 @@ const EngineerApp: React.FC = () => {
 
           <div className='p-4 bg-white border-t border-slate-100 sticky bottom-20 z-30'>
             <button
-              disabled={!repairActionText.trim() || isSubmittingRepair}
-              onClick={async () => {
-                setIsSubmittingRepair(true)
-                try {
-                  const response = await fetch(
-                    '/backend/repair-records/complete-with-details',
-                    {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        id: ongoingRepair?.id || 'rec-' + Date.now(),
-                        faultReason: repairActionText,
-                        treatment: repairActionText,
-                        photos: repairPhotos,
-                        completedSteps: sortedSteps
-                          .slice(0, activeGuideStepIdx + 1)
-                          .map((step) => step.id),
-                        submissionSource: submissionSource || 'APP',
-                        isNewIssue: isNewIssue
-                      })
-                    }
-                  )
-                  const result = await response.json()
-                  if (result.code === 200) {
-                    alert(
-                      `您的维修记录（来源：${submissionSource}${isNewIssue ? ' | 标记为新问题' : ''}）与优化建议已同步至后台管理系统。管理员将根据您的反馈进一步完善 SOP 内容，感谢您的贡献！`
-                    )
-                    setRepairActionText('')
-                    setRepairPhotos([])
-                    setSubmissionSource(null)
-                    setIsNewIssue(false)
-                    setStep('SCAN')
-                  } else {
-                    alert('提交维修记录失败: ' + result.message)
-                  }
-                } catch (error) {
-                  console.error('提交维修记录失败:', error)
-                  alert('提交维修记录失败，请稍后重试')
-                } finally {
-                  setIsSubmittingRepair(false)
+              onClick={() => {
+                if (!repairActionText.trim()) {
+                  alert('请填写操作记录')
+                  return
                 }
+                setStep('REPAIR_REPORT')
               }}
-              className={`w-full py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center space-x-2 active:scale-95 transition-all ${!repairActionText.trim() || isSubmittingRepair ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white hover:bg-black'}`}>
-              {isSubmittingRepair ? (
-                <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
-              ) : (
-                <>
-                  <Send size={18} />
-                  <span>确认提交执行记录</span>
-                </>
-              )}
+              className={`w-full py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center space-x-2 active:scale-95 transition-all ${!repairActionText.trim() ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white hover:bg-black'}`}>
+              <Send size={18} />
+              <span>确认提交执行记录</span>
             </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (step === 'REPAIR_REPORT' && selectedDevice) {
+      const now = new Date()
+      const timeStr = `${now.getFullYear()}-${String(
+        now.getMonth() + 1
+      ).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(
+        now.getHours()
+      ).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(
+        now.getSeconds()
+      ).padStart(2, '0')}`
+
+      return (
+        <div className='flex flex-col h-full animate-in slide-in-from-right-4 duration-300 bg-slate-50'>
+          {/* 顶部导航 */}
+          <div className='flex items-center justify-between px-4 py-3 bg-[#2979ff] text-white shrink-0'>
+            <button onClick={() => setStep('FINAL_SUBMIT')} className='p-1'>
+              <ArrowLeft size={22} />
+            </button>
+            <span className='text-base font-bold'>维修</span>
+            <button className='text-sm opacity-90'>维修记录</button>
+          </div>
+
+          <div className='flex-1 overflow-y-auto pb-24'>
+            {/* 设备状态栏 */}
+            <div className='px-4 py-3 bg-white border-b border-slate-100 flex items-center justify-between'>
+              <span className='text-sm font-bold text-slate-800 uppercase'>
+                {selectedDevice.id} | {selectedDevice.name}
+              </span>
+              <span className='text-xs font-bold text-amber-500'>维修中</span>
+            </div>
+
+            {/* 维修信息表单 */}
+            <div className='px-4 py-4 space-y-5'>
+              <h3 className='text-base font-bold text-slate-900'>维修信息</h3>
+
+              <div className='space-y-4 text-sm'>
+                <div className='flex items-center'>
+                  <span className='w-20 text-slate-500'>维修时间：</span>
+                  <span className='text-slate-700'>{timeStr}</span>
+                </div>
+
+                <div className='flex items-center'>
+                  <span className='w-20 text-slate-500'>维修位置：</span>
+                  <select
+                    value={repairLocation}
+                    onChange={(e) => setRepairLocation(e.target.value)}
+                    className='flex-1 p-0 bg-transparent text-slate-400 outline-none'>
+                    <option value=''>选择位置</option>
+                    <option value='A区-01'>A区-01</option>
+                    <option value='B区-05'>B区-05</option>
+                  </select>
+                </div>
+
+                <div className='flex items-center'>
+                  <span className='w-20 text-slate-500'>维修内容：</span>
+                  <select
+                    value={repairContent}
+                    onChange={(e) => setRepairContent(e.target.value)}
+                    className='flex-1 p-0 bg-transparent text-slate-400 outline-none'>
+                    <option value=''>选择内容</option>
+                    <option value='更换传感器'>更换传感器</option>
+                    <option value='清洁透镜'>清洁透镜</option>
+                    <option value='固件升级'>固件升级</option>
+                  </select>
+                </div>
+
+                <div className='flex flex-col space-y-2'>
+                  <span className='text-slate-500'>情况说明：</span>
+                  <textarea
+                    value={repairActionText}
+                    onChange={(e) => setRepairActionText(e.target.value)}
+                    className='w-full p-3 bg-white border border-slate-200 rounded-lg h-24 text-sm outline-none'
+                  />
+                </div>
+
+                <div className='flex flex-col space-y-2'>
+                  <span className='text-slate-500'>拍照说明：</span>
+                  <div className='flex flex-wrap gap-2'>
+                    {repairPhotos.map((photo, idx) => (
+                      <div key={idx} className='w-16 h-16 relative'>
+                        <img
+                          src={photo}
+                          className='w-full h-full object-cover rounded-lg'
+                          alt='维修照片'
+                        />
+                        <button
+                          onClick={() =>
+                            setRepairPhotos((prev) =>
+                              prev.filter((_, i) => i !== idx)
+                            )
+                          }
+                          className='absolute -top-1 -right-1 bg-white text-rose-500 rounded-full shadow-sm'>
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {repairPhotos.length < 4 && (
+                      <button
+                        onClick={() =>
+                          setRepairPhotos((prev) => [
+                            ...prev,
+                            'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400'
+                          ])
+                        }
+                        className='w-16 h-16 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center text-slate-300 bg-white'>
+                        <Plus size={24} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className='flex items-center'>
+                  <span className='w-20 text-slate-500'>维修状态：</span>
+                  <select
+                    value={repairStatus}
+                    onChange={(e) => setRepairStatus(e.target.value)}
+                    className='flex-1 p-0 bg-transparent text-slate-400 outline-none'>
+                    <option value='维修中'>选择状态</option>
+                    <option value='已完成'>已完成</option>
+                    <option value='待料中'>待料中</option>
+                  </select>
+                </div>
+
+                <div className='flex items-center'>
+                  <span className='w-20 text-slate-500'>备件添加：</span>
+                  <button className='px-3 py-1 bg-emerald-500 text-white text-xs rounded-full font-bold active:scale-95'>
+                    领取备件
+                  </button>
+                </div>
+              </div>
+
+              <div className='pt-4 space-y-3'>
+                <h4 className='text-sm font-bold text-slate-700'>
+                  最近一次维修记录
+                </h4>
+                <div className='bg-emerald-100/50 p-4 rounded-2xl relative border border-emerald-100'>
+                  <div className='space-y-2 text-xs'>
+                    <p className='font-bold text-slate-800'>
+                      SMD-05 | Lead Molding
+                    </p>
+                    <p className='text-slate-600'>报修时间：2026-08-21 08:14:36</p>
+                    <p className='text-slate-600'>问题类型：预见性维护</p>
+                    <p className='text-slate-600'>负责人：鲁文申</p>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className='absolute right-4 top-1/2 -translate-y-1/2 text-slate-400'
+                  />
+                </div>
+                <p className='text-[10px] text-slate-400 font-bold'>
+                  最近一次该问题类型维修记录
+                </p>
+              </div>
+
+              {/* 完成提交按钮 */}
+              <button
+                onClick={() => {
+                  setRepairActionText('')
+                  setRepairPhotos([])
+                  setRepairLocation('')
+                  setRepairContent('')
+                  setRepairStatus('维修中')
+                  setSubmissionSource(null)
+                  setIsNewIssue(false)
+                  setStep('DASHBOARD')
+                }}
+                className='w-full py-3.5 bg-emerald-500 text-white rounded-full font-bold text-sm shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center space-x-2'>
+                <CheckCircle2 size={18} />
+                <span>完成提交</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 底部按钮 */}
+          <div className='absolute bottom-0 left-0 right-0 p-4 bg-slate-50/80 backdrop-blur-md'>
+            <div className='flex items-center space-x-3'>
+              <button
+                onClick={() => {
+                  setRepairActionText('')
+                  setRepairPhotos([])
+                  setRepairLocation('')
+                  setRepairContent('')
+                  setRepairStatus('维修中')
+                  setSubmissionSource(null)
+                  setIsNewIssue(false)
+                  setStep('DASHBOARD')
+                }}
+                className='w-28 py-3 bg-slate-200 text-slate-600 rounded-full font-bold text-sm active:scale-95 transition-all'>
+                完成
+              </button>
+              <button
+                onClick={async () => {
+                  setIsSubmittingRepair(true)
+                  try {
+                    const payload = {
+                      guideId: selectedGuide.id,
+                      deviceId: selectedDevice?.id,
+                      actionText: repairActionText,
+                      location: repairLocation,
+                      content: repairContent,
+                      status: repairStatus,
+                      photos: repairPhotos,
+                      source: submissionSource || 'APP',
+                      isNewIssue
+                    }
+                    // 模拟 API 调用
+                    const response = await fetch(
+                      '/backend/repair-records/complete-final',
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                      }
+                    )
+                    const result = await response.json()
+                    if (result.code === 200) {
+                      alert('维修报告已成功提交！')
+                      setRepairActionText('')
+                      setRepairPhotos([])
+                      setRepairLocation('')
+                      setRepairContent('')
+                      setRepairStatus('维修中')
+                      setSubmissionSource(null)
+                      setIsNewIssue(false)
+                      setStep('DASHBOARD')
+                    } else {
+                      alert('提交失败: ' + result.message)
+                    }
+                  } catch (error) {
+                    console.error('提交失败:', error)
+                    alert('提交成功 (模拟模式)')
+                    setStep('DASHBOARD')
+                  } finally {
+                    setIsSubmittingRepair(false)
+                  }
+                }}
+                disabled={isSubmittingRepair}
+                className='flex-1 py-3 bg-[#2979ff] text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-all flex items-center justify-center'>
+                {isSubmittingRepair ? (
+                  <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+                ) : (
+                  '提交'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -1800,6 +1991,262 @@ const EngineerApp: React.FC = () => {
     )
   }
 
+  const renderDeviceDetail = () => {
+    if (!viewingRequest) return null
+    const device = MOCK_DEVICES.find((d) => d.id === viewingRequest.deviceId)
+
+    return (
+      <div className='flex flex-col h-full bg-[#f4f7f9] animate-in slide-in-from-right-4 duration-300 overflow-y-auto pb-20'>
+        {/* Header */}
+        <div className='bg-blue-600 px-4 py-4 flex items-center relative shrink-0'>
+          <button
+            onClick={() => setStep('DASHBOARD')}
+            className='absolute left-4 text-white p-1 hover:bg-white/10 rounded-full transition-colors'>
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className='text-white text-lg font-bold mx-auto'>设备详情</h1>
+        </div>
+
+        {/* Sub Header */}
+        <div className='bg-white px-4 py-3 border-b border-slate-100 flex justify-between items-center shrink-0'>
+          <div className='font-bold text-slate-800 text-sm'>
+            {viewingRequest.deviceSN} &nbsp;&nbsp; | &nbsp;&nbsp; {viewingRequest.deviceName}
+          </div>
+          <span className='text-xs font-bold text-amber-500'>维修中</span>
+        </div>
+
+        {/* Info Section */}
+        <div className='bg-white mt-2 px-4 py-5 space-y-4'>
+          <h2 className='text-base font-black text-slate-900 flex items-center'>
+            报修信息
+          </h2>
+          <div className='space-y-3 text-[13px] text-slate-600'>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>设备名称:</span>
+              <span className='font-bold text-slate-800'>{viewingRequest.deviceSN} | {viewingRequest.deviceName}</span>
+            </div>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>报修时间:</span>
+              <span className='font-bold text-slate-800'>{viewingRequest.requestTime}</span>
+            </div>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>报修人:</span>
+              <span className='font-bold text-slate-800'>{viewingRequest.requester}</span>
+            </div>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>问题类型:</span>
+              <span className='font-bold text-slate-800'>预见性维护</span>
+            </div>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>问题描述:</span>
+              <span className='font-bold text-slate-800'>{viewingRequest.description || '测试保修'}</span>
+            </div>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>相关图片:</span>
+              <span className='font-bold text-slate-800'></span>
+            </div>
+            <div className='flex items-start'>
+              <span className='w-20 shrink-0 font-medium'>关联批号:</span>
+              <span className='font-bold text-slate-800'></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className='grid grid-cols-2 gap-4 px-4 py-6 bg-white border-t border-slate-50'>
+          <button className='py-4 bg-[#00c853] text-white rounded-xl font-black text-sm shadow-sm active:scale-95 transition-all'>
+            无需维修
+          </button>
+          <button
+            onClick={() => {
+              setStep('ALARM_SELECT')
+            }}
+            className='py-4 bg-[#2979ff] text-white rounded-xl font-black text-sm shadow-sm active:scale-95 transition-all'>
+            维修
+          </button>
+          <button className='py-4 bg-[#ffc107] text-white rounded-xl font-black text-sm shadow-sm active:scale-95 transition-all'>
+            周PM
+          </button>
+          <button className='py-4 bg-[#ff1744] text-white rounded-xl font-black text-sm shadow-sm active:scale-95 transition-all'>
+            周PM复查
+          </button>
+        </div>
+
+        {/* Recent Repair Section */}
+        <div className='px-4 mt-6'>
+          <div className='flex justify-between items-center mb-3'>
+            <h3 className='text-[13px] font-black text-slate-800'>最近一次报修信息</h3>
+            <button className='text-xs font-bold text-blue-600'>更多</button>
+          </div>
+          <div className='bg-[#fdf6e3] rounded-2xl p-4 shadow-sm border border-amber-100/50 relative group active:scale-[0.98] transition-all'>
+            <div className='flex justify-between items-start mb-3'>
+              <h3 className='font-black text-slate-800 text-sm'>
+                {viewingRequest.deviceSN} | {viewingRequest.deviceName}
+              </h3>
+              <ChevronRight size={16} className='text-slate-400' />
+            </div>
+            <div className='space-y-2 text-[11px] text-slate-600 font-medium'>
+              <div className='flex items-center space-x-2'>
+                <span className='opacity-60'>报修时间:</span>
+                <span>{viewingRequest.requestTime}</span>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <span className='opacity-60'>问题类型:</span>
+                <span>预见性维护</span>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <span className='opacity-60'>报修人:</span>
+                <span>{viewingRequest.requester}</span>
+              </div>
+            </div>
+            <div className='mt-4 flex justify-end'>
+              <span className='text-[10px] font-black text-slate-800'>
+                维修状态：<span className='text-amber-600'>维修中</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent PM Section */}
+        <div className='px-4 mt-6'>
+          <div className='flex justify-between items-center mb-3'>
+            <h3 className='text-[13px] font-black text-slate-800'>最近一次周PM信息</h3>
+            <button className='text-xs font-bold text-blue-600'>更多</button>
+          </div>
+          <div className='bg-emerald-50/50 h-8 rounded-xl border border-dashed border-emerald-200'></div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderDashboard = () => {
+    return (
+      <div className='flex flex-col h-full bg-slate-50 animate-in fade-in duration-500'>
+        {/* Header */}
+        <div className='bg-blue-600 px-4 py-4 flex items-center justify-center relative'>
+          <h1 className='text-white text-lg font-bold'>鲁文申在线</h1>
+        </div>
+
+        {/* Quick Actions */}
+        <div className='bg-white grid grid-cols-4 py-6 px-2 border-b border-slate-100'>
+          <div className='flex flex-col items-center space-y-2 group active:scale-95 transition-all'>
+            <div className='p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors'>
+              <Hammer size={24} />
+            </div>
+            <span className='text-xs font-bold text-slate-600'>报修</span>
+          </div>
+          <div className='flex flex-col items-center space-y-2 group active:scale-95 transition-all'>
+            <div className='p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors'>
+              <Cpu size={24} />
+            </div>
+            <span className='text-xs font-bold text-slate-600'>设备</span>
+          </div>
+          <div className='flex flex-col items-center space-y-2 group active:scale-95 transition-all'>
+            <div className='p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors'>
+              <Package size={24} />
+            </div>
+            <span className='text-xs font-bold text-slate-600'>备件</span>
+          </div>
+          <div className='flex flex-col items-center space-y-2 group active:scale-95 transition-all'>
+            <div className='p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors'>
+              <LayoutGrid size={24} />
+            </div>
+            <span className='text-xs font-bold text-slate-600'>模具</span>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className='flex bg-white border-b border-slate-100'>
+          <button
+            onClick={() => setDashboardTab('EQUIPMENT')}
+            className={`flex-1 py-3 text-xs font-bold transition-all relative ${dashboardTab === 'EQUIPMENT' ? 'text-blue-600' : 'text-slate-400'}`}>
+            待处理设备任务
+            {dashboardTab === 'EQUIPMENT' && (
+              <div className='absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-600 rounded-full' />
+            )}
+          </button>
+          <button
+            onClick={() => setDashboardTab('PM')}
+            className={`flex-1 py-3 text-xs font-bold transition-all relative ${dashboardTab === 'PM' ? 'text-blue-600' : 'text-slate-400'}`}>
+            待处理周PM(16)
+            {dashboardTab === 'PM' && (
+              <div className='absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-600 rounded-full' />
+            )}
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className='flex-1 overflow-y-auto p-4 space-y-4'>
+          {dashboardTab === 'EQUIPMENT' ? (
+            <>
+              {MOCK_REPAIR_REQUESTS.map((req) => (
+                <div
+                  key={req.id}
+                  onClick={() => {
+                    const device = MOCK_DEVICES.find((d) => d.id === req.deviceId)
+                    if (device) {
+                      setSelectedDevice(device)
+                      setViewingRequest(req)
+                      setStep('DEVICE_DETAIL')
+                    }
+                  }}
+                  className='bg-[#fdf6e3] rounded-2xl p-4 shadow-sm border border-amber-100/50 relative group active:scale-[0.98] transition-all'>
+                  <div className='flex justify-between items-start mb-3'>
+                    <h3 className='font-black text-slate-800 text-sm'>
+                      {req.deviceSN} | {req.deviceName}
+                    </h3>
+                    <ChevronRight
+                      size={16}
+                      className='text-slate-400 group-hover:translate-x-1 transition-transform'
+                    />
+                  </div>
+
+                  <div className='space-y-2 text-[11px] text-slate-600 font-medium'>
+                    <div className='flex items-center space-x-2'>
+                      <span className='opacity-60'>报修时间:</span>
+                      <span>{req.requestTime}</span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='opacity-60'>问题类型:</span>
+                      <span>预见性维护</span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='opacity-60'>报修人:</span>
+                      <span>{req.requester}</span>
+                    </div>
+                  </div>
+
+                  <div className='mt-4 flex justify-end'>
+                    <span className='text-[10px] font-black text-amber-600 bg-amber-100/50 px-2 py-1 rounded-lg'>
+                      状态：维修中
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className='flex flex-col items-center justify-center py-20 text-slate-300'>
+              <ClipboardList size={48} className='mb-4 opacity-20' />
+              <p className='text-xs font-bold'>暂无周 PM 任务</p>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const renderMessages = () => (
+    <div className='flex flex-col h-full bg-slate-50 animate-in fade-in duration-500'>
+      <div className='bg-blue-600 px-4 py-4 flex items-center justify-center relative'>
+        <h1 className='text-white text-lg font-bold'>消息中心</h1>
+      </div>
+      <div className='flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4'>
+        <Bell size={48} className='opacity-20' />
+        <p className='text-xs font-bold'>暂无新消息</p>
+      </div>
+    </div>
+  )
+
   const renderProfile = () => (
     <div className='space-y-6 flex flex-col h-full animate-in fade-in duration-500 pb-20'>
       <div className='bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center text-center'>
@@ -1834,18 +2281,37 @@ const EngineerApp: React.FC = () => {
   )
 
   const renderNavBar = () => (
-    <div className='absolute bottom-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-[150] px-8 flex items-center justify-around rounded-t-[2.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.03)]'>
+    <div className='absolute bottom-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-[150] px-6 flex items-center justify-around rounded-t-[2.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.03)]'>
       <button
-        onClick={() => setActiveTab('HOME')}
+        onClick={() => {
+          setActiveTab('HOME')
+          setStep('DASHBOARD')
+        }}
         className={`flex flex-col items-center space-y-1 transition-all ${activeTab === 'HOME' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
         <div
           className={`p-2 rounded-xl transition-all ${activeTab === 'HOME' ? 'bg-blue-50' : 'bg-transparent'}`}>
-          <Home size={22} />
+          <LayoutGrid size={22} />
         </div>
         <span className='text-[10px] font-black uppercase tracking-widest'>
           首页
         </span>
       </button>
+
+      <button
+        onClick={() => setActiveTab('MESSAGE')}
+        className={`flex flex-col items-center space-y-1 transition-all relative ${activeTab === 'MESSAGE' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
+        <div
+          className={`p-2 rounded-xl transition-all ${activeTab === 'MESSAGE' ? 'bg-blue-50' : 'bg-transparent'}`}>
+          <Bell size={22} />
+        </div>
+        <span className='text-[10px] font-black uppercase tracking-widest'>
+          消息
+        </span>
+        <div className='absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm'>
+          4
+        </div>
+      </button>
+
       <button
         onClick={() => setActiveTab('PROFILE')}
         className={`flex flex-col items-center space-y-1 transition-all ${activeTab === 'PROFILE' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -1873,7 +2339,9 @@ const EngineerApp: React.FC = () => {
               ? renderContent()
               : activeTab === 'HOME'
                 ? renderContent()
-                : renderProfile()}
+                : activeTab === 'MESSAGE'
+                  ? renderMessages()
+                  : renderProfile()}
           </div>
           {step !== 'APP_LOGIN' && renderNavBar()}
         </div>
@@ -1884,7 +2352,9 @@ const EngineerApp: React.FC = () => {
             ? renderContent()
             : activeTab === 'HOME'
               ? renderContent()
-              : renderProfile()}
+              : activeTab === 'MESSAGE'
+                ? renderMessages()
+                : renderProfile()}
         </div>
         {step !== 'APP_LOGIN' && renderNavBar()}
       </div>

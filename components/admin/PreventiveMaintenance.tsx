@@ -28,7 +28,10 @@ import {
   CircleCheck,
   TriangleAlert,
   Volume2,
-  History
+  History,
+  Sparkles,
+  Target,
+  ArrowLeft
 } from 'lucide-react'
 import {
   SparePart,
@@ -52,11 +55,21 @@ import { isAutoSpeakEnabled, subscribeAutoSpeak } from './autoSpeak'
 
 // ================= 主组件 =================
 
-const PreventiveMaintenance: React.FC = () => {
+interface PreventiveMaintenanceProps {
+  isAdmin?: boolean // 仅管理员可删除更换记录
+}
+
+const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
+  isAdmin = false
+}) => {
   const [activeTab, setActiveTab] = useState('预警看板')
-  // 分级权限：设备工程师(可全部操作) / 技术员(仅录入与查询)
-  const [role, setRole] = useState<'ENGINEER' | 'TECHNICIAN'>('ENGINEER')
-  const isEngineer = role === 'ENGINEER'
+  // 分级权限：管理员(可删除) / 设备工程师(可全部操作) / 技术员(仅录入与查询)
+  const [role, setRole] = useState<'ADMIN' | 'ENGINEER' | 'TECHNICIAN'>(
+    'ENGINEER'
+  )
+  const isEngineer = role !== 'TECHNICIAN'
+  // 管理员身份：外部登录用户为管理员，或页面内切换为管理员
+  const effectiveIsAdmin = isAdmin || role === 'ADMIN'
 
   // 基础数据
   const [machineTypes, setMachineTypes] = useState<MachineTypeInfo[]>(MOCK_MACHINE_TYPES)
@@ -92,6 +105,9 @@ const PreventiveMaintenance: React.FC = () => {
 
   // 安全系数修正草稿
   const [factorDrafts, setFactorDrafts] = useState<Record<string, string>>({})
+
+  // 更换规律预测二级页
+  const [showPrediction, setShowPrediction] = useState(false)
 
   // 红牌持续弹窗
   const [redPopupDismissed, setRedPopupDismissed] = useState(false)
@@ -212,6 +228,18 @@ const PreventiveMaintenance: React.FC = () => {
     setFormFailureReason('')
   }
 
+  // 删除更换记录（仅管理员可操作）
+  const handleDeleteRecord = (id: string) => {
+    if (!effectiveIsAdmin) {
+      setToast('仅管理员可删除更换记录')
+      return
+    }
+    const target = records.find((r) => r.id === id)
+    if (!window.confirm(`确认删除更换记录「${target?.orderNo || id}」？删除后该备件的生命周期将自动重算。`)) return
+    setRecords((prev) => prev.filter((r) => r.id !== id))
+    setToast('更换记录已删除（已触发周期自动重算）')
+  }
+
   // 预填更换表单并打开录入弹窗（红牌弹窗与预警卡片共用）
   const prefillAndOpenRecord = (a: PartAlertStatus) => {
     setFormDeviceNo(a.deviceNo)
@@ -265,6 +293,107 @@ const PreventiveMaintenance: React.FC = () => {
     XLSX.writeFile(wb, `备件更换台账_${todayStr()}.xlsx`)
     setToast(`已导出 ${rows.length} 条台账记录到 Excel`)
   }
+
+  // ============ 更换规律预测分析 ============
+
+  const addDays = (dateStr: string, days: number): string => {
+    const d = new Date(dateStr + 'T00:00:00')
+    d.setDate(d.getDate() + days)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  // 预测结果项
+  const predictionResults = useMemo(() => {
+    // 1. 按「设备编号 + 型号 + 安装位置」三要素分组
+    const map = new Map<string, ReplacementRecord[]>()
+    records.forEach((r) => {
+      const key = `${r.deviceNo}|${r.model}|${r.installPosition}`
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(r)
+    })
+
+    // 2. 计算每个组的历史更换间隔与规律明确度
+    const groupInfos = Array.from(map.entries()).map(([key, recs]) => {
+      const sorted = [...recs].sort((a, b) => a.replaceDate.localeCompare(b.replaceDate))
+      const gaps: number[] = []
+      for (let i = 1; i < sorted.length; i++) {
+        gaps.push(dayDiff(sorted[i - 1].replaceDate, sorted[i].replaceDate))
+      }
+      const failureCount = sorted.filter((r) => r.reason === 'failure').length
+      const mean = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
+      const variance = gaps.length ? gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length : 0
+      const cv = mean > 0 ? Math.sqrt(variance) / mean : 0
+      return { key, recs: sorted, gaps, mean, cv, failureCount, last: sorted[sorted.length - 1] }
+    })
+
+    // 3. 规律明确的组（≥2 次间隔、无突发故障、间隔稳定）作为「参考规律来源」
+    const clearGroups = groupInfos.filter((g) => g.gaps.length >= 2 && g.failureCount === 0 && g.cv <= 0.5)
+    const refByModel = new Map<string, number[]>()
+    const refAll: number[] = []
+    clearGroups.forEach((g) => {
+      g.gaps.forEach((gap) => {
+        refAll.push(gap)
+        const model = g.last.model
+        if (!refByModel.has(model)) refByModel.set(model, [])
+        refByModel.get(model)!.push(gap)
+      })
+    })
+
+    // 4. 筛选「非明确性」备件并给出预测建议
+    const results: Array<{
+      key: string
+      deviceNo: string
+      partName: string
+      model: string
+      installPosition: string
+      recordCount: number
+      failureCount: number
+      lastReplaceDate: string
+      usedDays: number
+      ownGaps: number[]
+      cv: number
+      reasons: string[]
+      refAvgDays: number
+      predictedDays: number
+      predictedDate: string
+    }> = []
+    groupInfos.forEach((g) => {
+      const reasons: string[] = []
+      if (g.gaps.length < 2) {
+        reasons.push(g.gaps.length === 0 ? '仅 1 次更换记录，无法独立判断周期' : '更换次数过少，自身规律不明确')
+      }
+      if (g.failureCount > 0) reasons.push(`含 ${g.failureCount} 次突发故障更换，间隔不稳定`)
+      if (g.gaps.length >= 2 && g.cv > 0.5) reasons.push(`更换间隔波动大（变异系数 ${(g.cv * 100).toFixed(0)}%）`)
+      if (reasons.length === 0) return
+
+      // 参考其他备件的更换规律：优先同型号，其次全部明确组
+      const refGaps = (refByModel.get(g.last.model) || []).length ? refByModel.get(g.last.model)! : refAll
+      const refAvg = refGaps.length ? Math.round(refGaps.reduce((a, b) => a + b, 0) / refGaps.length) : 0
+      const ownMean = g.mean > 0 ? Math.round(g.mean) : 0
+      const predictedDays = refAvg > 0 ? Math.round(refAvg * 0.9) : ownMean || 90
+      results.push({
+        key: g.key,
+        deviceNo: g.last.deviceNo,
+        partName: g.last.partName,
+        model: g.last.model,
+        installPosition: g.last.installPosition,
+        recordCount: g.recs.length,
+        failureCount: g.failureCount,
+        lastReplaceDate: g.last.replaceDate,
+        usedDays: dayDiffToToday(g.last.replaceDate),
+        ownGaps: g.gaps,
+        cv: g.cv,
+        reasons,
+        refAvgDays: refAvg,
+        predictedDays,
+        predictedDate: addDays(g.last.replaceDate, predictedDays)
+      })
+    })
+    // 只保留更换次数充足、可统计出规律信息的备件；更换次数过少（无法统计）的直接剔除
+    return results
+      .filter((r) => r.recordCount >= 2)
+      .sort((a, b) => a.predictedDays - b.predictedDays)
+  }, [records])
 
   // ============ 安全系数修正 ============
 
@@ -768,6 +897,11 @@ const PreventiveMaintenance: React.FC = () => {
             </div>
             <div className='flex items-center space-x-3'>
               <button
+                onClick={() => setShowPrediction(true)}
+                className='flex items-center space-x-1.5 px-4 py-2 bg-violet-600 text-white rounded-xl text-xs font-black hover:bg-violet-700 transition-all active:scale-95'>
+                <Sparkles size={14} /> 规律预测
+              </button>
+              <button
                 onClick={handleExportExcel}
                 className='flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all active:scale-95'>
                 <Download size={14} /> 导出 Excel
@@ -791,6 +925,9 @@ const PreventiveMaintenance: React.FC = () => {
                   <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>更换原因</th>
                   <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>使用时长</th>
                   <th className='px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>操作人</th>
+                  {effectiveIsAdmin && (
+                    <th className='px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right'>操作</th>
+                  )}
                 </tr>
               </thead>
               <tbody className='divide-y divide-slate-100'>
@@ -816,14 +953,160 @@ const PreventiveMaintenance: React.FC = () => {
                     </td>
                     <td className='px-4 py-4 text-xs font-black text-slate-800'>{recordUsage(r)}<span className='text-[10px] text-slate-400'> 天</span></td>
                     <td className='px-6 py-4 text-xs font-bold text-slate-600'>{r.operator}</td>
+                    {effectiveIsAdmin && (
+                      <td className='px-6 py-4 text-right'>
+                        <button
+                          onClick={() => handleDeleteRecord(r.id)}
+                          className='p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95'
+                          title='删除记录'>
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filteredRecords.length === 0 && (
-                  <tr><td colSpan={8} className='px-6 py-12 text-center text-slate-400 text-sm'>暂无符合条件的更换记录</td></tr>
+                  <tr><td colSpan={effectiveIsAdmin ? 9 : 8} className='px-6 py-12 text-center text-slate-400 text-sm'>暂无符合条件的更换记录</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ============ 渲染：更换规律预测二级页 ============
+
+  const renderPrediction = () => {
+    return (
+      <div className='fixed inset-0 z-[90] bg-slate-100 overflow-y-auto animate-in fade-in duration-300'>
+        {/* 顶部导航 */}
+        <div className='sticky top-0 z-10 bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-lg'>
+          <div className='flex items-center space-x-3'>
+            <button
+              onClick={() => setShowPrediction(false)}
+              className='p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95'>
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h2 className='text-sm font-black flex items-center'>
+                <Sparkles size={16} className='mr-2 text-violet-400' /> 备件更换规律预测
+              </h2>
+              <p className='text-[10px] text-slate-400 font-bold mt-0.5'>
+                筛查非明确性备件 · 参考其他备件更换规律推算建议周期
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowPrediction(false)}
+            className='p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95'>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className='max-w-6xl mx-auto px-6 py-6 space-y-6'>
+          {/* 预测结果列表 */}
+          {predictionResults.length === 0 ? (
+            <div className='bg-white rounded-[2rem] border border-slate-200 shadow-sm p-16 text-center space-y-4'>
+              <div className='p-5 bg-emerald-50 rounded-full w-fit mx-auto'>
+                <CircleCheck size={32} className='text-emerald-500' />
+              </div>
+              <p className='text-sm font-black text-slate-800'>所有备件均具备明确的更换规律</p>
+              <p className='text-xs text-slate-400 font-bold'>无需参考其他备件进行预测</p>
+            </div>
+          ) : (
+            <div className='space-y-4'>
+              {predictionResults.map((p) => {
+                const remaining = p.predictedDays - p.usedDays
+                const overdue = remaining <= 0
+                return (
+                  <div key={p.key} className='bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden'>
+                    {/* 头部 */}
+                    <div className='px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3'>
+                      <div className='flex items-center space-x-3'>
+                        <div className='p-2.5 bg-violet-50 text-violet-600 rounded-xl'>
+                          <Target size={18} />
+                        </div>
+                        <div>
+                          <h3 className='text-sm font-black text-slate-800'>
+                            {p.deviceNo} <span className='text-slate-300 font-black mx-1'>|</span> {p.partName}
+                          </h3>
+                          <p className='text-[10px] font-mono text-slate-400 mt-0.5'>
+                            {p.model} · {p.installPosition}
+                          </p>
+                        </div>
+                      </div>
+                      <div className='flex flex-wrap gap-2'>
+                        {p.reasons.map((r, i) => (
+                          <span key={i} className='inline-flex items-center px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black'>
+                            <AlertOctagon size={11} className='mr-1' /> {r}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className='px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-6'>
+                      {/* 自身历史 */}
+                      <div>
+                        <h4 className='text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3'>自身更换历史</h4>
+                        <div className='space-y-2'>
+                          <div className='flex items-center justify-between text-xs'>
+                            <span className='text-slate-500 font-bold'>更换次数</span>
+                            <span className='font-black text-slate-800'>{p.recordCount} 次{p.failureCount > 0 && <span className='text-rose-500'>（故障 {p.failureCount} 次）</span>}</span>
+                          </div>
+                          <div className='flex items-center justify-between text-xs'>
+                            <span className='text-slate-500 font-bold'>间隔样本</span>
+                            <span className='font-black text-slate-800 font-mono'>
+                              {p.ownGaps.length ? p.ownGaps.join(' / ') : '—'}
+                            </span>
+                          </div>
+                          <div className='flex items-center justify-between text-xs'>
+                            <span className='text-slate-500 font-bold'>最近更换</span>
+                            <span className='font-black text-slate-800'>{p.lastReplaceDate}（{p.usedDays} 天前）</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 参考规律 */}
+                      <div className='border-l border-slate-100 pl-6'>
+                        <h4 className='text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3'>参考规律（其他备件）</h4>
+                        <div className='space-y-2'>
+                          <div className='flex items-center justify-between text-xs'>
+                            <span className='text-slate-500 font-bold'>参考平均周期</span>
+                            <span className='font-black text-emerald-600'>{p.refAvgDays > 0 ? `${p.refAvgDays} 天` : '暂无同型参考'}</span>
+                          </div>
+                          <div className='flex items-center justify-between text-xs'>
+                            <span className='text-slate-500 font-bold'>建议更换周期</span>
+                            <span className='font-black text-violet-600'>{p.predictedDays} 天（×0.9）</span>
+                          </div>
+                          <div className='flex items-center justify-between text-xs'>
+                            <span className='text-slate-500 font-bold'>预测更换日期</span>
+                            <span className='font-black text-slate-800'>{p.predictedDate}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 预测结论 */}
+                      <div className={`border-l pl-6 flex flex-col justify-center ${overdue ? 'border-rose-200' : 'border-emerald-200'}`}>
+                        <div className={`rounded-2xl p-4 ${overdue ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                          <p className='text-[10px] font-black uppercase tracking-widest mb-1'>
+                            {overdue ? '建议尽快更换' : '距预测更换'}
+                          </p>
+                          <p className='text-2xl font-black'>
+                            {overdue ? `已超 ${-remaining} 天` : `${remaining} 天`}
+                          </p>
+                          <p className='text-[10px] font-bold mt-1 opacity-70'>
+                            按参考规律推算，建议在 {p.predictedDate} 前完成更换
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -860,19 +1143,27 @@ const PreventiveMaintenance: React.FC = () => {
                 <tr>
                   <th className='px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>设备 / 备件</th>
                   <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>历史更换</th>
+                  <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>初始寿命</th>
                   <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>平均寿命</th>
                   <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>安全系数</th>
                   <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>预警阈值</th>
-                  <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>下次更换节点</th>
+                  <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>过期时间</th>
+                  <th className='px-4 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest'>预警时间</th>
                   <th className='px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right'>操作</th>
                 </tr>
               </thead>
               <tbody className='divide-y divide-slate-100'>
                 {alertStatuses.map((a) => {
                   const currentFactor = parts.find((p) => p.id === a.partId)?.safetyFactor ?? 0.9
+                  const stdLifecycle = parts.find((p) => p.id === a.partId)?.standardLifecycleDays
+                  // 过期时间 = 最近更换日期 + 预警阈值天数
                   const nextDate = new Date(a.lastReplaceDate + 'T00:00:00')
                   nextDate.setDate(nextDate.getDate() + a.thresholdDays)
                   const nextDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`
+                  // 预警时间 = 过期时间 - 7 天
+                  const warnDate = new Date(nextDate)
+                  warnDate.setDate(warnDate.getDate() - 7)
+                  const warnDateStr = `${warnDate.getFullYear()}-${String(warnDate.getMonth() + 1).padStart(2, '0')}-${String(warnDate.getDate()).padStart(2, '0')}`
                   return (
                     <tr key={a.key} className='hover:bg-slate-50/50 transition-colors'>
                       <td className='px-6 py-4'>
@@ -880,6 +1171,7 @@ const PreventiveMaintenance: React.FC = () => {
                         <p className='text-[10px] text-slate-400 font-bold'>{a.model} / {a.installPosition}</p>
                       </td>
                       <td className='px-4 py-4 text-xs font-bold text-slate-600'>{a.recordsCount} 次</td>
+                      <td className='px-4 py-4 text-xs font-black text-slate-800'>{stdLifecycle ?? '—'}<span className='text-[10px] text-slate-400'> 天</span></td>
                       <td className='px-4 py-4 text-xs font-black text-slate-800'>{a.avgLifecycleDays}<span className='text-[10px] text-slate-400'> 天</span></td>
                       <td className='px-4 py-4 text-xs font-black text-amber-600'>{currentFactor}</td>
                       <td className='px-4 py-4'>
@@ -887,7 +1179,10 @@ const PreventiveMaintenance: React.FC = () => {
                           {a.thresholdDays} 天
                         </span>
                       </td>
-                      <td className='px-4 py-4 text-xs font-bold text-slate-600'>{nextDateStr}</td>
+                      <td className='px-4 py-4'>
+                        <span className={`text-xs font-bold ${a.level === 'red' ? 'text-rose-600' : a.level === 'yellow' ? 'text-amber-600' : 'text-slate-600'}`}>{nextDateStr}</span>
+                      </td>
+                      <td className='px-4 py-4 text-xs font-bold text-slate-600'>{warnDateStr}</td>
                       <td className='px-6 py-4 text-right'>
                         {isEngineer ? (
                           <div className='flex items-center justify-end space-x-2'>
@@ -1190,6 +1485,11 @@ const PreventiveMaintenance: React.FC = () => {
           <div className='flex items-center bg-slate-100 rounded-2xl p-1.5'>
             <UserCog size={14} className='mr-2 ml-2 text-slate-400' />
             <button
+              onClick={() => setRole('ADMIN')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${role === 'ADMIN' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>
+              管理员
+            </button>
+            <button
               onClick={() => setRole('ENGINEER')}
               className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${role === 'ENGINEER' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>
               设备工程师
@@ -1200,9 +1500,14 @@ const PreventiveMaintenance: React.FC = () => {
               技术员
             </button>
           </div>
-          {!isEngineer && (
+          {role === 'TECHNICIAN' && (
             <span className='inline-flex items-center px-3 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black'>
               <Lock size={11} className='mr-1' /> 技术员模式：仅可录入与查询
+            </span>
+          )}
+          {role === 'ADMIN' && (
+            <span className='inline-flex items-center px-3 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black'>
+              <Lock size={11} className='mr-1' /> 管理员模式：可删除更换记录
             </span>
           )}
         </div>
@@ -1247,6 +1552,7 @@ const PreventiveMaintenance: React.FC = () => {
 
       {renderRedPopup()}
       {renderAddRecordModal()}
+      {showPrediction && renderPrediction()}
 
       {/* 新增机型弹窗 */}
       {showAddMachine && (
