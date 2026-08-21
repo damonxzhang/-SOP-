@@ -135,21 +135,6 @@ export interface StepInquiry {
   };
 }
 
-// 新增：邮件通知定义（模拟接收邮件）
-export interface EmailNotification {
-  id: string;
-  subject: string;        // 邮件主题
-  deviceName: string;     // 设备名称
-  deviceSN?: string;      // 设备序列号
-  faultCode: string;      // 故障代码
-  repairType: string;     // 报修类型
-  requester: string;      // 提交人
-  sendTime: string;       // 提交/推送时间
-  feedback: string;       // 反馈意见内容
-  inquiryId?: string;     // 关联的现场提问 ID
-  status: 'unread' | 'read'; // 邮件状态
-}
-
 // 新增：维修申请单定义
 export interface RepairRequest {
   id: string;

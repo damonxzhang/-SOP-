@@ -28,7 +28,6 @@ import {
   CircleCheck,
   TriangleAlert,
   Volume2,
-  History,
   Sparkles,
   Target,
   ArrowLeft
@@ -105,6 +104,9 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
 
   // 安全系数修正草稿
   const [factorDrafts, setFactorDrafts] = useState<Record<string, string>>({})
+
+  // 初始寿命修正草稿
+  const [lifecycleDrafts, setLifecycleDrafts] = useState<Record<string, string>>({})
 
   // 更换规律预测二级页
   const [showPrediction, setShowPrediction] = useState(false)
@@ -426,6 +428,37 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
     setToast(`安全系数已由 ${oldFactor} 调整为 ${draft}，预警阈值已联动更新`)
   }
 
+  // ============ 初始寿命修正 ============
+
+  const handleSaveLifecycle = (alert: PartAlertStatus) => {
+    const draft = parseInt(lifecycleDrafts[alert.partId] ?? '', 10)
+    if (isNaN(draft) || draft <= 0) {
+      setToast('初始寿命需为正整数')
+      return
+    }
+    const oldLifecycle = parts.find((p) => p.id === alert.partId)?.standardLifecycleDays
+    if (oldLifecycle === draft) {
+      setToast('数值未发生变化')
+      return
+    }
+    setParts((prev) => prev.map((p) => (p.id === alert.partId ? { ...p, standardLifecycleDays: draft } : p)))
+    setAdjustLogs((prev) => [
+      {
+        id: `log-${Date.now()}`,
+        partId: alert.partId,
+        partName: alert.partName,
+        field: '初始寿命',
+        beforeValue: oldLifecycle ?? 0,
+        afterValue: draft,
+        operator: formOperator,
+        operateTime: nowStr()
+      },
+      ...prev
+    ])
+    setLifecycleDrafts((prev) => ({ ...prev, [alert.partId]: '' }))
+    setToast(`初始寿命已由 ${oldLifecycle} 天调整为 ${draft} 天`)
+  }
+
   // ============ 基础数据操作 ============
 
   const handleAddMachine = () => {
@@ -590,13 +623,6 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
             <h3 className='text-sm font-black text-slate-800 flex items-center'>
               <Boxes size={16} className='mr-2 text-blue-600' /> 机型分类
             </h3>
-            {isEngineer && (
-              <button
-                onClick={() => setShowAddMachine(true)}
-                className='flex items-center space-x-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all active:scale-95'>
-                <Plus size={14} /> 新增机型
-              </button>
-            )}
           </div>
           <div className='flex flex-wrap gap-3'>
             <button
@@ -620,23 +646,6 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
             <h3 className='text-sm font-black text-slate-800 flex items-center'>
               <Database size={16} className='mr-2 text-blue-600' /> 备件库字典（{filteredParts.length}）
             </h3>
-            {isEngineer && (
-              <button
-                onClick={() =>
-                  setPartModal({
-                    machineType: machineFilter === 'all' ? 'Y-series' : machineFilter,
-                    code: '',
-                    name: '',
-                    model: '',
-                    installPosition: '',
-                    standardLifecycleDays: 180,
-                    safetyFactor: 0.9
-                  })
-                }
-                className='flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all active:scale-95'>
-                <Plus size={14} /> 新增备件
-              </button>
-            )}
           </div>
           <div className='overflow-x-auto'>
             <table className='w-full text-left border-collapse'>
@@ -906,11 +915,6 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                 className='flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all active:scale-95'>
                 <Download size={14} /> 导出 Excel
               </button>
-              <button
-                onClick={() => setShowAddRecord(true)}
-                className='flex items-center space-x-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all active:scale-95'>
-                <Plus size={14} /> 新增更换记录
-              </button>
             </div>
           </div>
           <div className='overflow-x-auto'>
@@ -1122,6 +1126,7 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
           <span>
             算法说明：系统按「设备编号 + 型号 + 安装位置」三要素独立归类，对历史更换间隔进行<b>加权平均</b>（越新的记录权重越高）得出平均实际使用寿命；
             预警阈值 = 平均寿命 × 安全系数。每新增一条更换记录即实时重算。
+            <span className='text-red-500'>如果更换记录出现删除记录的情况，需要手动更新，重新计算一下当前的备件生命周期，会做全量计算。</span>
           </span>
         </div>
 
@@ -1171,7 +1176,28 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                         <p className='text-[10px] text-slate-400 font-bold'>{a.model} / {a.installPosition}</p>
                       </td>
                       <td className='px-4 py-4 text-xs font-bold text-slate-600'>{a.recordsCount} 次</td>
-                      <td className='px-4 py-4 text-xs font-black text-slate-800'>{stdLifecycle ?? '—'}<span className='text-[10px] text-slate-400'> 天</span></td>
+                      {isEngineer ? (
+                        <td className='px-4 py-4'>
+                          <div className='flex items-center space-x-1.5'>
+                            <input
+                              type='number'
+                              min='1'
+                              placeholder={String(stdLifecycle ?? '')}
+                              value={lifecycleDrafts[a.partId] ?? ''}
+                              onChange={(e) => setLifecycleDrafts((prev) => ({ ...prev, [a.partId]: e.target.value }))}
+                              className='w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
+                            />
+                            <span className='text-[10px] text-slate-400'>天</span>
+                            <button
+                              onClick={() => handleSaveLifecycle(a)}
+                              className='px-2 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all active:scale-95'>
+                              保存
+                            </button>
+                          </div>
+                        </td>
+                      ) : (
+                        <td className='px-4 py-4 text-xs font-black text-slate-800'>{stdLifecycle ?? '—'}<span className='text-[10px] text-slate-400'> 天</span></td>
+                      )}
                       <td className='px-4 py-4 text-xs font-black text-slate-800'>{a.avgLifecycleDays}<span className='text-[10px] text-slate-400'> 天</span></td>
                       <td className='px-4 py-4 text-xs font-black text-amber-600'>{currentFactor}</td>
                       <td className='px-4 py-4'>
@@ -1212,37 +1238,6 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* 修正日志 */}
-        <div className='bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden'>
-          <div className='px-6 py-5 border-b border-slate-100'>
-            <h3 className='text-sm font-black text-slate-800 flex items-center'>
-              <History size={16} className='mr-2 text-blue-600' /> 参数修正日志（全链路审计）
-            </h3>
-          </div>
-          <ul className='divide-y divide-slate-100'>
-            {adjustLogs.map((log) => (
-              <li key={log.id} className='px-6 py-4 flex items-center justify-between'>
-                <div className='flex items-center space-x-3'>
-                  <div className='p-2 bg-amber-50 text-amber-600 rounded-xl'><Pencil size={14} /></div>
-                  <div>
-                    <p className='text-xs font-black text-slate-800'>{log.partName} · {log.field}</p>
-                    <p className='text-[10px] font-bold text-slate-400'>
-                      {log.beforeValue} → <span className='text-amber-600'>{log.afterValue}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className='text-right'>
-                  <p className='text-xs font-black text-slate-600'>{log.operator}</p>
-                  <p className='text-[10px] font-bold text-slate-400'>{log.operateTime}</p>
-                </div>
-              </li>
-            ))}
-            {adjustLogs.length === 0 && (
-              <li className='px-6 py-10 text-center text-slate-400 text-sm'>暂无参数修正记录</li>
-            )}
-          </ul>
         </div>
       </div>
     )

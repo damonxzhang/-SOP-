@@ -1,5 +1,5 @@
 import React from 'react'
-import { MessageSquare, Search, Eye, Send } from 'lucide-react'
+import { MessageSquare, Search, Eye } from 'lucide-react'
 import { StepInquiry } from '../../types'
 
 interface InquiryListProps {
@@ -8,7 +8,6 @@ interface InquiryListProps {
   inquiryFaultCodeFilter: string
   setInquiryFaultCodeFilter: (filter: string) => void
   onViewInquiry: (inquiry: StepInquiry) => void
-  onPushEmail: (inquiry: StepInquiry) => void
   pagination: {
     page: number
     limit: number
@@ -23,7 +22,6 @@ const InquiryList: React.FC<InquiryListProps> = ({
   inquiryFaultCodeFilter,
   setInquiryFaultCodeFilter,
   onViewInquiry,
-  onPushEmail,
   pagination,
   onPageChange
 }) => {
@@ -110,12 +108,6 @@ const InquiryList: React.FC<InquiryListProps> = ({
                   </td>
                   <td className='px-8 py-6 text-right'>
                     <div className='flex items-center justify-end space-x-2'>
-                      <button
-                        onClick={() => onPushEmail(inq)}
-                        title='推送邮件'
-                        className='p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-emerald-600 hover:border-emerald-600 transition-all shadow-sm active:scale-90'>
-                        <Send size={16} />
-                      </button>
                       <button
                         onClick={() => onViewInquiry(inq)}
                         className='p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-600 transition-all shadow-sm active:scale-90'>

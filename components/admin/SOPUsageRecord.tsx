@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import {
-  BookOpen,
   Search,
   RefreshCcw,
   ChevronDown,
   ChevronRight,
   History,
   ClipboardList,
-  Layers,
-  Users
+  Layers
 } from 'lucide-react'
 import { MaintenanceGuide, RepairRecord, Device, User } from '../../types'
 import { MOCK_RECORDS } from '../../constants'
@@ -99,19 +97,6 @@ const SOPUsageRecord: React.FC<SOPUsageRecordProps> = ({
     })
   }, [records, search, guideFilter, deviceFilter, engineerFilter, guides, devices, users])
 
-  const totalStepUsage = useMemo(
-    () => records.reduce((sum, r) => sum + r.completedSteps.length, 0),
-    [records]
-  )
-  const usedGuideCount = useMemo(
-    () => new Set(records.map((r) => r.guideId)).size,
-    [records]
-  )
-  const engineerCount = useMemo(
-    () => new Set(records.map((r) => r.engineerId)).size,
-    [records]
-  )
-
   const resetFilters = () => {
     setSearch('')
     setGuideFilter('all')
@@ -141,50 +126,6 @@ const SOPUsageRecord: React.FC<SOPUsageRecordProps> = ({
             数据加载中...
           </span>
         )}
-      </div>
-
-      {/* 统计卡片 */}
-      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-        <div className='bg-white rounded-2xl border border-slate-200 p-5 shadow-sm'>
-          <div className='flex items-center space-x-2 text-slate-400'>
-            <ClipboardList size={16} className='text-blue-500' />
-            <span className='text-[10px] font-black uppercase tracking-widest'>
-              维修记录
-            </span>
-          </div>
-          <p className='text-3xl font-black text-blue-600 mt-3'>{records.length}</p>
-          <p className='text-[10px] text-slate-400 font-bold mt-1'>使用过 SOP 的维修任务</p>
-        </div>
-        <div className='bg-white rounded-2xl border border-slate-200 p-5 shadow-sm'>
-          <div className='flex items-center space-x-2 text-slate-400'>
-            <BookOpen size={16} className='text-indigo-500' />
-            <span className='text-[10px] font-black uppercase tracking-widest'>
-              涉及 SOP
-            </span>
-          </div>
-          <p className='text-3xl font-black text-indigo-600 mt-3'>{usedGuideCount}</p>
-          <p className='text-[10px] text-slate-400 font-bold mt-1'>被引用的标准 SOP 库</p>
-        </div>
-        <div className='bg-white rounded-2xl border border-slate-200 p-5 shadow-sm'>
-          <div className='flex items-center space-x-2 text-slate-400'>
-            <Layers size={16} className='text-emerald-500' />
-            <span className='text-[10px] font-black uppercase tracking-widest'>
-              步骤执行
-            </span>
-          </div>
-          <p className='text-3xl font-black text-emerald-600 mt-3'>{totalStepUsage}</p>
-          <p className='text-[10px] text-slate-400 font-bold mt-1'>累计执行的操作步骤</p>
-        </div>
-        <div className='bg-white rounded-2xl border border-slate-200 p-5 shadow-sm'>
-          <div className='flex items-center space-x-2 text-slate-400'>
-            <Users size={16} className='text-amber-500' />
-            <span className='text-[10px] font-black uppercase tracking-widest'>
-              工程师
-            </span>
-          </div>
-          <p className='text-3xl font-black text-amber-600 mt-3'>{engineerCount}</p>
-          <p className='text-[10px] text-slate-400 font-bold mt-1'>参与执行的工程师</p>
-        </div>
       </div>
 
       {/* 筛选区 */}

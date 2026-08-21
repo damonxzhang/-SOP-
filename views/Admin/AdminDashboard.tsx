@@ -24,7 +24,6 @@ import {
   XCircle,
   Layers,
   Trash2,
-  Mail,
   ShieldAlert,
   ShieldCheck,
   Eye,
@@ -51,7 +50,6 @@ import {
   Unlock,
   Send,
   Bell,
-  MailCheck,
   ExternalLink,
   RefreshCcw,
   AlertCircle,
@@ -72,8 +70,7 @@ import {
   PermissionLevel,
   StepInquiry,
   MediaResource,
-  Device,
-  EmailNotification
+  Device
 } from '../../types'
 import { REPAIR_OPTIONS_BY_MODEL, DEFAULT_REPAIR_OPTIONS } from '../../constants'
 import {
@@ -99,7 +96,6 @@ import InquiryList from '../../components/admin/InquiryList'
 import MediaLibrary from '../../components/admin/MediaLibrary'
 import UserManagement from '../../components/admin/UserManagement'
 import PersonalInfo from '../../components/admin/PersonalInfo'
-import EmailInbox from '../../components/admin/EmailInbox'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
 import SOPUsageRecord from '../../components/admin/SOPUsageRecord'
 import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from '../../components/admin/pmShared'
@@ -286,9 +282,6 @@ const AdminDashboard: React.FC = () => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
   const [mediaSearch, setMediaSearch] = useState('')
   const [mediaTypeFilter, setMediaTypeFilter] = useState('all')
-  // 模拟邮件通知状态
-  const [emails, setEmails] = useState<EmailNotification[]>([])
-  const [emailToast, setEmailToast] = useState<string | null>(null)
 
   // 分页状态
   const [pagination, setPagination] = useState({
@@ -566,33 +559,6 @@ const AdminDashboard: React.FC = () => {
     })
   }, [inquiries, inquiryFaultCodeFilter])
 
-  // 推送邮件：将现场提问生成一封模拟邮件并放入收件箱
-  const handlePushEmail = (inq: StepInquiry) => {
-    const deviceName = inq.context?.deviceName || '未知设备'
-    const faultCode = inq.context?.faultCode || '未知故障码'
-    const requester = inq.context?.engineerName || '现场工程师'
-    const repairType = inq.context?.repairType || inq.context?.stepTitle || '未知报修类型'
-    const sendTime = inq.createdAt
-      ? new Date(inq.createdAt.replace(' ', 'T')).toLocaleString('zh-CN', { hour12: false })
-      : new Date().toLocaleString('zh-CN', { hour12: false })
-
-    const email: EmailNotification = {
-      id: `email-${Date.now()}`,
-      subject: `【报修提醒】${deviceName} - ${repairType}（故障码 ${faultCode}）`,
-      deviceName,
-      faultCode,
-      repairType,
-      requester,
-      sendTime,
-      feedback: inq.question,
-      inquiryId: inq.id,
-      status: 'unread'
-    }
-    setEmails((prev) => [email, ...prev])
-    setEmailToast(`邮件已推送成功：${email.subject}`)
-    setTimeout(() => setEmailToast(null), 3000)
-  }
-
   // 移除“故障概率建模”，保留其他模块
   const navItems = [
     { id: '统计看板', icon: <LayoutDashboard size={18} />, label: '统计看板' },
@@ -601,11 +567,6 @@ const AdminDashboard: React.FC = () => {
       id: '现场提问记录',
       icon: <MessageSquare size={18} />,
       label: '现场提问记录'
-    },
-    {
-      id: '邮件通知',
-      icon: <Mail size={18} />,
-      label: '邮件通知'
     },
     {
       id: '预防性维护管理',
@@ -975,23 +936,8 @@ const AdminDashboard: React.FC = () => {
             inquiryFaultCodeFilter={inquiryFaultCodeFilter}
             setInquiryFaultCodeFilter={setInquiryFaultCodeFilter}
             onViewInquiry={setViewingInquiry}
-            onPushEmail={handlePushEmail}
             pagination={pagination.inquiries}
             onPageChange={(page) => handlePageChange('inquiries', page)}
-          />
-        )
-      case '邮件通知':
-        return (
-          <EmailInbox
-            emails={emails}
-            onMarkRead={(id) =>
-              setEmails((prev) =>
-                prev.map((e) => (e.id === id ? { ...e, status: 'read' } : e))
-              )
-            }
-            onDelete={(id) =>
-              setEmails((prev) => prev.filter((e) => e.id !== id))
-            }
           />
         )
       case '预防性维护管理':
@@ -2805,18 +2751,6 @@ const AdminDashboard: React.FC = () => {
       </aside>
 
       <div className='flex-1 pl-8 space-y-6'>{renderContent()}</div>
-
-      {/* 邮件推送成功提示 */}
-      {emailToast && (
-        <div className='fixed top-20 right-6 z-[70] animate-in slide-in-from-top-4 duration-300'>
-          <div className='flex items-center space-x-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-emerald-200'>
-            <MailCheck size={18} />
-            <span className='text-sm font-bold max-w-md truncate'>
-              {emailToast}
-            </span>
-          </div>
-        </div>
-      )}
 
       {renderUploadModal()}
       {renderMediaViewModal()}
