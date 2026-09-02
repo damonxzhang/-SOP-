@@ -24,7 +24,6 @@ import {
   ExternalLink,
   Maximize2,
   History,
-  Calendar,
   ClipboardCheck,
   ClipboardList,
   Camera,
@@ -46,7 +45,6 @@ import {
   MOCK_GUIDES,
   MOCK_USER,
   MOCK_RECORDS,
-  ALL_USERS,
   MOCK_REPAIR_REQUESTS,
   MOCK_MEDIA_RESOURCES
 } from '../../constants'
@@ -183,15 +181,6 @@ const EngineerApp: React.FC = () => {
       MOCK_USER.assignedDeviceIds.includes(d.id)
     )
   }, [])
-
-  // 获取当前报警代码的相关历史
-  const alarmHistory = useMemo(() => {
-    if (!selectedGuide) return []
-    return MOCK_RECORDS.filter((r) => r.guideId === selectedGuide.id).sort(
-      (a, b) =>
-        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-    )
-  }, [selectedGuide])
 
   const availableAlarms = useMemo(() => {
     if (!selectedDevice) return []
@@ -403,15 +392,6 @@ const EngineerApp: React.FC = () => {
               <h2 className='text-sm font-black text-slate-900'>
                 已识别机台: {selectedDevice?.model}
               </h2>
-              <div className='flex items-center space-x-2'>
-                <p className='text-[10px] text-blue-600 font-bold uppercase tracking-tighter'>
-                  SN: {selectedDevice?.sn}
-                </p>
-                <span className='text-[10px] text-slate-300'>|</span>
-                <p className='text-[10px] text-slate-400 font-mono'>
-                  V 1.1.20260213.002
-                </p>
-              </div>
             </div>
           </div>
 
@@ -656,89 +636,76 @@ const EngineerApp: React.FC = () => {
                   </div>
 
                   <div className='flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide pb-20'>
-                    <div className='grid grid-cols-2 gap-4'>
-                      <div className='p-5 bg-slate-50 rounded-3xl border border-slate-100'>
-                        <p className='text-[10px] text-slate-400 font-black uppercase mb-1'>
-                          报修机台
-                        </p>
-                        <p className='text-xs font-black text-slate-800'>
-                          {viewingRequest.deviceName}
-                        </p>
-                        <p className='text-[9px] font-mono text-slate-400 mt-0.5'>
-                          {viewingRequest.deviceSN}
-                        </p>
-                      </div>
-                      <div className='p-5 bg-slate-50 rounded-3xl border border-slate-100'>
-                        <p className='text-[10px] text-slate-400 font-black uppercase mb-1'>
-                          报修时间
-                        </p>
-                        <p className='text-xs font-black text-slate-800'>
-                          {viewingRequest.requestTime}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className='p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 space-y-3'>
-                      <div className='flex items-center justify-between'>
-                        <div className='flex items-center space-x-2'>
-                          <span className='text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-lg'>
-                            {viewingRequest.faultCode}
+                    <div className='bg-white px-6 py-5 space-y-4 rounded-[2rem] border border-slate-100 shadow-sm'>
+                      <h2 className='text-sm font-black text-slate-900 flex items-center'>
+                        <ClipboardList
+                          size={14}
+                          className='mr-2 text-blue-600'
+                        />
+                        报修信息
+                      </h2>
+                      <div className='space-y-3 text-[13px] text-slate-600'>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            设备名称:
                           </span>
-                          <h4 className='text-[11px] font-black text-blue-900 uppercase'>
-                            故障描述
-                          </h4>
+                          <span className='font-bold text-slate-800'>
+                            {viewingRequest.deviceSN} |{' '}
+                            {viewingRequest.deviceName}
+                          </span>
+                        </div>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            报修时间:
+                          </span>
+                          <span className='font-bold text-slate-800'>
+                            {viewingRequest.requestTime}
+                          </span>
+                        </div>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            报修人:
+                          </span>
+                          <span className='font-bold text-slate-800'>
+                            {viewingRequest.requester}
+                          </span>
+                        </div>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            问题类型:
+                          </span>
+                          <span className='font-bold text-slate-800'>
+                            预见性维护
+                          </span>
+                        </div>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            问题描述:
+                          </span>
+                          <span className='font-bold text-slate-800'>
+                            {viewingRequest.description}
+                          </span>
+                        </div>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            相关图片:
+                          </span>
+                          <span className='font-bold text-slate-800'></span>
+                        </div>
+                        <div className='flex items-start'>
+                          <span className='w-20 shrink-0 font-medium'>
+                            关联批号:
+                          </span>
+                          <span className='font-bold text-slate-800'></span>
                         </div>
                       </div>
-                      <p className='text-xs font-bold text-slate-700 leading-relaxed italic'>
-                        "{viewingRequest.description}"
-                      </p>
                     </div>
 
-                    {viewingRequest.photos &&
-                      viewingRequest.photos.length > 0 && (
-                        <div className='space-y-4'>
-                          <p className='text-[10px] text-slate-400 font-black uppercase px-1 flex items-center'>
-                            <ImageIcon size={14} className='mr-2' />{' '}
-                            现场报修图片
-                          </p>
-                          <div className='grid grid-cols-2 gap-4'>
-                            {viewingRequest.photos.map(
-                              (url: string, index: number) => (
-                                <div
-                                  key={index}
-                                  className='aspect-square rounded-3xl overflow-hidden border border-slate-100 shadow-sm'>
-                                  <img
-                                    src={url}
-                                    alt={`报修现场-${index}`}
-                                    className='w-full h-full object-cover'
-                                  />
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                    <div className='pt-4'>
-                      <button
-                        onClick={() => {
-                          const guide = MOCK_GUIDES.find(
-                            (g) =>
-                              g.deviceId === viewingRequest.deviceId &&
-                              g.faultCode === viewingRequest.faultCode
-                          )
-                          if (guide) {
-                            setSelectedGuide(guide)
-                            setActiveGuideStepIdx(0)
-                            setStep('STEP_LIST')
-                            setViewingRequest(null)
-                          }
-                        }}
-                        className='w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all flex items-center justify-center space-x-2'>
-                        <span>关闭</span>
-                        <ChevronRight size={18} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setViewingRequest(null)}
+                      className='w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all'>
+                      关闭
+                    </button>
                   </div>
                 </div>
               </div>
@@ -749,11 +716,8 @@ const EngineerApp: React.FC = () => {
               <div className='flex items-center justify-between px-1 mb-4'>
                 <h4 className='text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center'>
                   <Clock size={12} className='mr-1.5 text-blue-500' />{' '}
-                  待处理维修申请
+                  相关报修内容
                 </h4>
-                <span className='px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black'>
-                  {MOCK_REPAIR_REQUESTS.length} 条
-                </span>
               </div>
 
               <div className='space-y-3'>
@@ -872,11 +836,6 @@ const EngineerApp: React.FC = () => {
                   <p className='text-[10px] text-slate-400 mt-2 line-clamp-2 italic'>
                     {s.description}
                   </p>
-                  <div className='mt-4 flex items-center space-x-2'>
-                    <span className='text-[8px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded border border-slate-100'>
-                      {s.stage}
-                    </span>
-                  </div>
                 </div>
               ))}
             </div>
@@ -903,24 +862,29 @@ const EngineerApp: React.FC = () => {
 
     if (step === 'GUIDE' && selectedGuide) {
       const currentStep = sortedSteps[activeGuideStepIdx]
+      const currentRequest =
+        MOCK_REPAIR_REQUESTS.find(
+          (r) => r.deviceId === selectedGuide.deviceId
+        ) ||
+        MOCK_REPAIR_REQUESTS[0] ||
+        null
       return (
         <div className='flex flex-col h-full animate-in fade-in duration-500 relative'>
-          {/* 报警历史浮层 - 进入时显示 */}
+          {/* 报修信息浮层 - 进入时显示 */}
           {showHistoryOverlay && (
             <div className='absolute inset-0 z-[180] bg-slate-900/60 backdrop-blur-md flex items-end animate-in fade-in duration-300'>
-              <div className='w-full bg-white rounded-t-[3rem] shadow-2xl flex flex-col max-h-[85%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden'>
+              <div className='w-full bg-white rounded-t-[3rem] shadow-2xl flex flex-col max-h-[88%] animate-in slide-in-from-bottom-full duration-500 overflow-hidden'>
                 <div className='p-8 border-b border-slate-100 flex items-center justify-between shrink-0'>
                   <div className='flex items-center space-x-4'>
-                    <div className='p-3 bg-amber-50 text-amber-600 rounded-2xl'>
-                      <History size={24} />
+                    <div className='p-3 bg-blue-50 text-blue-600 rounded-2xl'>
+                      <ClipboardList size={24} />
                     </div>
                     <div>
                       <h3 className='text-lg font-black text-slate-900'>
-                        历史问题参考
+                        报修申请详情
                       </h3>
                       <p className='text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5'>
-                        代码: {selectedGuide.faultCode} · {alarmHistory.length}{' '}
-                        条记录
+                        单号: {currentRequest?.id || '—'}
                       </p>
                     </div>
                   </div>
@@ -931,73 +895,75 @@ const EngineerApp: React.FC = () => {
                   </button>
                 </div>
 
-                <div className='flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide pb-12'>
-                  {alarmHistory.length > 0 ? (
-                    alarmHistory.map((rec) => (
-                      <div
-                        key={rec.id}
-                        className='p-5 bg-slate-50 rounded-3xl border border-slate-100 space-y-3'>
-                        <div className='flex justify-between items-center'>
-                          <div className='flex items-center space-x-2'>
-                            <Calendar size={12} className='text-slate-400' />
-                            <span className='text-[10px] font-black text-slate-500 uppercase'>
-                              {new Date(rec.startTime).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <span className='text-[9px] font-black bg-white px-2 py-1 rounded text-slate-400 border border-slate-100'>
-                            {
-                              ALL_USERS.find((u) => u.id === rec.engineerId)
-                                ?.name
-                            }
-                          </span>
-                        </div>
-                        <div>
-                          <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1'>
-                            故障原因
-                          </p>
-                          <p className='text-xs font-bold text-slate-800 leading-relaxed italic'>
-                            "{rec.faultReason}"
-                          </p>
-                        </div>
-                        <div>
-                          <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1'>
-                            处理方案
-                          </p>
-                          <p className='text-xs text-slate-600 leading-relaxed'>
-                            {rec.treatment}
-                          </p>
-                        </div>
-                        {rec.photos.length > 0 && (
-                          <div className='flex gap-2 overflow-x-auto pb-1 scrollbar-hide'>
-                            {rec.photos.map((p, idx) => (
-                              <img
-                                key={idx}
-                                src={p}
-                                className='w-16 h-16 object-cover rounded-xl border border-white shadow-sm'
-                                alt='维修照片'
-                              />
-                            ))}
-                          </div>
-                        )}
+                <div className='flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide pb-4'>
+                  <div className='bg-white px-6 py-5 space-y-4 rounded-[2rem] border border-slate-100 shadow-sm'>
+                    <h2 className='text-sm font-black text-slate-900 flex items-center'>
+                      <ClipboardList size={14} className='mr-2 text-blue-600' />
+                      报修信息
+                    </h2>
+                    <div className='space-y-3 text-[13px] text-slate-600'>
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          设备名称:
+                        </span>
+                        <span className='font-bold text-slate-800'>
+                          {currentRequest?.deviceSN || '—'} |{' '}
+                          {currentRequest?.deviceName || '—'}
+                        </span>
                       </div>
-                    ))
-                  ) : (
-                    <div className='py-12 text-center'>
-                      <div className='p-6 bg-slate-50 rounded-full w-fit mx-auto mb-4'>
-                        <ClipboardCheck size={32} className='text-slate-200' />
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          报修时间:
+                        </span>
+                        <span className='font-bold text-slate-800'>
+                          {currentRequest?.requestTime || '—'}
+                        </span>
                       </div>
-                      <p className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
-                        该报警代码尚无历史维修记录
-                      </p>
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          报修人:
+                        </span>
+                        <span className='font-bold text-slate-800'>
+                          {currentRequest?.requester || '—'}
+                        </span>
+                      </div>
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          问题类型:
+                        </span>
+                        <span className='font-bold text-slate-800'>
+                          预见性维护
+                        </span>
+                      </div>
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          问题描述:
+                        </span>
+                        <span className='font-bold text-slate-800'>
+                          {currentRequest?.description || '—'}
+                        </span>
+                      </div>
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          相关图片:
+                        </span>
+                        <span className='font-bold text-slate-800'></span>
+                      </div>
+                      <div className='flex items-start'>
+                        <span className='w-20 shrink-0 font-medium'>
+                          关联批号:
+                        </span>
+                        <span className='font-bold text-slate-800'></span>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className='p-8 bg-white border-t border-slate-100 shrink-0'>
                   <button
                     onClick={() => setShowHistoryOverlay(false)}
                     className='w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all'>
-                    开始执行当前 SOP
+                    关闭
                   </button>
                 </div>
               </div>
@@ -1544,12 +1510,35 @@ const EngineerApp: React.FC = () => {
                 <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest block'>
                   操作记录 / 执行说明
                 </label>
-                <textarea
-                  value={repairActionText}
-                  onChange={(e) => setRepairActionText(e.target.value)}
-                  placeholder='请简要描述您实际执行的操作、发现的问题或更换的备件...'
-                  className='w-full p-5 bg-white border border-slate-200 rounded-3xl text-xs min-h-[160px] outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all'
-                />
+                <div className='relative'>
+                  <select
+                    value={repairActionText}
+                    onChange={(e) => setRepairActionText(e.target.value)}
+                    className='w-full p-5 bg-white border border-slate-200 rounded-3xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all appearance-none pr-12'>
+                    <option value='' disabled>
+                      请选择本次执行结果...
+                    </option>
+                    <option value='已完成维修，设备恢复正常'>
+                      已完成维修，设备恢复正常
+                    </option>
+                    <option value='已更换备件，设备运行正常'>
+                      已更换备件，设备运行正常
+                    </option>
+                    <option value='已完成清洁保养'>
+                      已完成清洁保养
+                    </option>
+                    <option value='已完成校准调试'>
+                      已完成校准调试
+                    </option>
+                    <option value='发现新问题，需进一步排查'>
+                      发现新问题，需进一步排查
+                    </option>
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className='absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none'
+                  />
+                </div>
               </div>
 
               <div className='flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl border border-slate-100'>
