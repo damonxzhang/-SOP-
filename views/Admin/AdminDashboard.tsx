@@ -507,6 +507,8 @@ const AdminDashboard: React.FC = () => {
     avatar: ''
   })
   const [viewingInquiry, setViewingInquiry] = useState<StepInquiry | null>(null)
+  const [editingInquiry, setEditingInquiry] = useState<StepInquiry | null>(null)
+  const [editAnswer, setEditAnswer] = useState('')
   const [viewingMedia, setViewingMedia] = useState<MediaResource | null>(null)
   const [editingMedia, setEditingMedia] = useState<MediaResource | null>(null)
   const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([])
@@ -526,6 +528,9 @@ const AdminDashboard: React.FC = () => {
 
   // 现场提问记录筛选状态
   const [inquiryFaultCodeFilter, setInquiryFaultCodeFilter] = useState('')
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<
+    'all' | 'pending' | 'resolved'
+  >('all')
 
   const uniqueCategories = useMemo(() => {
     const categories = guides.map((g) => g.faultCategory)
@@ -548,6 +553,8 @@ const AdminDashboard: React.FC = () => {
 
   const filteredInquiries = useMemo(() => {
     return inquiries.filter((inq) => {
+      if (inquiryStatusFilter !== 'all' && inq.status !== inquiryStatusFilter)
+        return false
       if (!inquiryFaultCodeFilter) return true
       const guide = guides.find((g) => g.id === inq.guideId)
       const faultCode = inq.isNewIssue
@@ -557,7 +564,7 @@ const AdminDashboard: React.FC = () => {
         .toLowerCase()
         .includes(inquiryFaultCodeFilter.toLowerCase())
     })
-  }, [inquiries, inquiryFaultCodeFilter])
+  }, [inquiries, inquiryFaultCodeFilter, inquiryStatusFilter])
 
   // 移除“故障概率建模”，保留其他模块
   const navItems = [
@@ -935,7 +942,13 @@ const AdminDashboard: React.FC = () => {
             filteredInquiries={filteredInquiries}
             inquiryFaultCodeFilter={inquiryFaultCodeFilter}
             setInquiryFaultCodeFilter={setInquiryFaultCodeFilter}
+            inquiryStatusFilter={inquiryStatusFilter}
+            setInquiryStatusFilter={setInquiryStatusFilter}
             onViewInquiry={setViewingInquiry}
+            onEditInquiry={(inq) => {
+              setEditAnswer(inq.answer || '')
+              setEditingInquiry(inq)
+            }}
             pagination={pagination.inquiries}
             onPageChange={(page) => handlePageChange('inquiries', page)}
           />
@@ -1621,7 +1634,9 @@ const AdminDashboard: React.FC = () => {
   }
 
   const renderInquiryDetailModal = () => {
-    if (!viewingInquiry) return null
+    const isEditing = !!editingInquiry
+    const inquiry = viewingInquiry || editingInquiry
+    if (!inquiry) return null
 
     return (
       <div className='fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in'>
@@ -1636,12 +1651,15 @@ const AdminDashboard: React.FC = () => {
                   现场疑问处理面板
                 </h3>
                 <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1'>
-                  提问 ID: {viewingInquiry.id.toUpperCase()}
+                  提问 ID: {inquiry.id.toUpperCase()}
                 </p>
               </div>
             </div>
             <button
-              onClick={() => setViewingInquiry(null)}
+              onClick={() => {
+                setViewingInquiry(null)
+                setEditingInquiry(null)
+              }}
               className='p-3 hover:bg-slate-100 rounded-2xl transition-all'>
               <DeleteIcon size={24} />
             </button>
@@ -1660,7 +1678,7 @@ const AdminDashboard: React.FC = () => {
                       </p>
                       <p className='text-xs font-black text-slate-800'>
                         {
-                          users.find((u) => u.id === viewingInquiry.engineerId)
+                          users.find((u) => u.id === inquiry.engineerId)
                             ?.name
                         }
                       </p>
@@ -1671,12 +1689,12 @@ const AdminDashboard: React.FC = () => {
                       </p>
                       <p className='text-xs font-black text-slate-800'>
                         {
-                          devices.find((d) => d.id === viewingInquiry.deviceId)
+                          devices.find((d) => d.id === inquiry.deviceId)
                             ?.model
                         }{' '}
                         (
                         {
-                          devices.find((d) => d.id === viewingInquiry.deviceId)
+                          devices.find((d) => d.id === inquiry.deviceId)
                             ?.sn
                         }
                         )
@@ -1687,8 +1705,8 @@ const AdminDashboard: React.FC = () => {
                         故障代码 (SOP)
                       </p>
                       <p className='text-xs font-black text-blue-600'>
-                        {guides.find((g) => g.id === viewingInquiry.guideId)
-                          ?.faultCode || viewingInquiry.context?.faultCode}
+                        {guides.find((g) => g.id === inquiry.guideId)
+                          ?.faultCode || inquiry.context?.faultCode}
                       </p>
                     </div>
                     <div>
@@ -1696,19 +1714,9 @@ const AdminDashboard: React.FC = () => {
                         提交时的执行步骤
                       </p>
                       <p className='text-xs font-black text-slate-800'>
-                        {viewingInquiry.stepId !== 'unknown'
-                          ? `Step ${viewingInquiry.stepId}`
+                        {inquiry.stepId !== 'unknown'
+                          ? `Step ${inquiry.stepId}`
                           : '非步骤相关'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-[9px] text-slate-400 font-black uppercase tracking-widest'>
-                        问题类型
-                      </p>
-                      <p className='text-xs font-black text-slate-800'>
-                        {viewingInquiry.isNewIssue
-                          ? '新发现问题'
-                          : '已有步骤疑问'}
                       </p>
                     </div>
                     <div>
@@ -1716,9 +1724,9 @@ const AdminDashboard: React.FC = () => {
                         提交时间
                       </p>
                       <p className='text-xs font-black text-slate-800'>
-                        {viewingInquiry.createdAt &&
-                        !isNaN(Date.parse(viewingInquiry.createdAt))
-                          ? new Date(viewingInquiry.createdAt).toLocaleString()
+                        {inquiry.createdAt &&
+                        !isNaN(Date.parse(inquiry.createdAt))
+                          ? new Date(inquiry.createdAt).toLocaleString()
                           : '时间未录入'}
                       </p>
                     </div>
@@ -1734,8 +1742,8 @@ const AdminDashboard: React.FC = () => {
                         状态
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${viewingInquiry.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                        {viewingInquiry.status === 'pending'
+                        className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${inquiry.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {inquiry.status === 'pending'
                           ? '待处理'
                           : '已处理'}
                       </span>
@@ -1749,16 +1757,16 @@ const AdminDashboard: React.FC = () => {
                     <MessageSquare size={12} className='mr-2' /> 提问内容
                   </h4>
                   <p className='text-xs text-slate-700 leading-relaxed'>
-                    {viewingInquiry.question}
+                    {inquiry.question}
                   </p>
-                  {viewingInquiry.images &&
-                    viewingInquiry.images.length > 0 && (
+                  {inquiry.images &&
+                    inquiry.images.length > 0 && (
                       <div className='mt-4 space-y-2'>
                         <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest'>
                           现场物证图片
                         </p>
                         <div className='grid grid-cols-2 gap-3'>
-                          {viewingInquiry.images.map((img, i) => (
+                          {inquiry.images.map((img, i) => (
                             <div
                               key={i}
                               className='aspect-square bg-slate-100 rounded-xl overflow-hidden'>
@@ -1777,22 +1785,28 @@ const AdminDashboard: React.FC = () => {
                   <h4 className='text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 flex items-center'>
                     <Send size={12} className='mr-2' /> 专家回复
                   </h4>
-                  {viewingInquiry.answer ? (
+                  {isEditing ? (
+                    <textarea
+                      value={editAnswer}
+                      onChange={(e) => setEditAnswer(e.target.value)}
+                      placeholder='请输入专家回复内容...'
+                      rows={6}
+                      className='w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y'
+                    />
+                  ) : inquiry.answer ? (
                     <div className='space-y-3'>
                       <p className='text-xs text-slate-700 leading-relaxed'>
-                        {viewingInquiry.answer}
+                        {inquiry.answer}
                       </p>
                       <div className='flex items-center justify-between text-[9px] text-slate-400 font-black uppercase tracking-widest'>
                         <span>
                           回复时间:{' '}
-                          {viewingInquiry.answeredAt
-                            ? new Date(
-                                viewingInquiry.answeredAt
-                              ).toLocaleString()
+                          {inquiry.answeredAt
+                            ? new Date(inquiry.answeredAt).toLocaleString()
                             : '未记录'}
                         </span>
                         <span>
-                          回复人: {viewingInquiry.answeredBy || '系统'}
+                          回复人: {inquiry.answeredBy || '系统'}
                         </span>
                       </div>
                     </div>
@@ -1813,16 +1827,53 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className='px-10 py-6 border-t border-slate-100 bg-white flex items-center justify-between'>
             <div className='flex items-center space-x-3'>
-              <button className='px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all'>
-                查看关联 SOP
+              <button
+                onClick={() => {
+                  setViewingInquiry(null)
+                  setEditingInquiry(null)
+                }}
+                className='px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all'>
+                {isEditing ? '取消' : '关闭'}
               </button>
-              <button className='px-6 py-2.5 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all'>
-                标记为已处理
-              </button>
+              {!isEditing && (
+                <>
+                  <button className='px-6 py-2.5 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all'>
+                    查看关联 SOP
+                  </button>
+                  <button className='px-6 py-2.5 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all'>
+                    标记为已处理
+                  </button>
+                </>
+              )}
             </div>
-            <button className='px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95'>
-              发送回复
-            </button>
+            {isEditing ? (
+              <button
+                onClick={() => {
+                  if (!editingInquiry) return
+                  setInquiries((prev) =>
+                    prev.map((inq) =>
+                      inq.id === editingInquiry.id
+                        ? {
+                            ...inq,
+                            status: 'resolved',
+                            answer: editAnswer || inq.answer,
+                            answeredAt: new Date().toLocaleString(),
+                            answeredBy: currentUser?.name || '系统'
+                          }
+                        : inq
+                    )
+                  )
+                  setEditingInquiry(null)
+                  setEditAnswer('')
+                }}
+                className='px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95'>
+                保存回复
+              </button>
+            ) : inquiry.status === 'pending' ? (
+              <button className='px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95'>
+                发送回复
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

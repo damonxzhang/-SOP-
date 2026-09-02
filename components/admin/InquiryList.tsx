@@ -1,5 +1,5 @@
 import React from 'react'
-import { MessageSquare, Search, Eye } from 'lucide-react'
+import { MessageSquare, Search, Eye, Pencil } from 'lucide-react'
 import { StepInquiry } from '../../types'
 
 interface InquiryListProps {
@@ -7,7 +7,10 @@ interface InquiryListProps {
   filteredInquiries: StepInquiry[]
   inquiryFaultCodeFilter: string
   setInquiryFaultCodeFilter: (filter: string) => void
+  inquiryStatusFilter: 'all' | 'pending' | 'resolved'
+  setInquiryStatusFilter: (filter: 'all' | 'pending' | 'resolved') => void
   onViewInquiry: (inquiry: StepInquiry) => void
+  onEditInquiry: (inquiry: StepInquiry) => void
   pagination: {
     page: number
     limit: number
@@ -21,10 +24,18 @@ const InquiryList: React.FC<InquiryListProps> = ({
   filteredInquiries,
   inquiryFaultCodeFilter,
   setInquiryFaultCodeFilter,
+  inquiryStatusFilter,
+  setInquiryStatusFilter,
   onViewInquiry,
+  onEditInquiry,
   pagination,
   onPageChange
 }) => {
+  const statusTabs: { key: 'all' | 'pending' | 'resolved'; label: string }[] = [
+    { key: 'all', label: '全部' },
+    { key: 'pending', label: '未处理' },
+    { key: 'resolved', label: '已处理' }
+  ]
   return (
     <div className='space-y-6 animate-in fade-in duration-500'>
       <div className='bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6'>
@@ -55,6 +66,20 @@ const InquiryList: React.FC<InquiryListProps> = ({
             onChange={(e) => setInquiryFaultCodeFilter(e.target.value)}
             className='w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-inner'
           />
+        </div>
+        <div className='flex items-center gap-1.5'>
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setInquiryStatusFilter(tab.key)}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${
+                inquiryStatusFilter === tab.key
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-100'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}>
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -108,6 +133,14 @@ const InquiryList: React.FC<InquiryListProps> = ({
                   </td>
                   <td className='px-8 py-6 text-right'>
                     <div className='flex items-center justify-end space-x-2'>
+                      {inq.status === 'pending' && (
+                        <button
+                          onClick={() => onEditInquiry(inq)}
+                          title='编辑回复'
+                          className='flex items-center space-x-1.5 px-3 py-2.5 bg-amber-600 text-white rounded-xl text-[10px] font-black hover:bg-amber-700 transition-all shadow-sm active:scale-90'>
+                          <Pencil size={13} /> 编辑
+                        </button>
+                      )}
                       <button
                         onClick={() => onViewInquiry(inq)}
                         className='p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-600 transition-all shadow-sm active:scale-90'>
