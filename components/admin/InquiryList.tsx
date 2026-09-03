@@ -143,8 +143,9 @@ const InquiryList: React.FC<InquiryListProps> = ({
                       )}
                       <button
                         onClick={() => onViewInquiry(inq)}
-                        className='p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-600 transition-all shadow-sm active:scale-90'>
-                        <Eye size={16} />
+                        title='查看详情'
+                        className='flex items-center space-x-1.5 px-3 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black hover:text-blue-600 hover:border-blue-600 transition-all shadow-sm active:scale-90'>
+                        <Eye size={13} /> 查看
                       </button>
                     </div>
                   </td>

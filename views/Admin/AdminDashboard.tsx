@@ -40,6 +40,7 @@ import {
   BadgeCheck,
   Zap,
   Info,
+  ImagePlus,
   Shield,
   Cpu,
   Settings,
@@ -1633,6 +1634,64 @@ const AdminDashboard: React.FC = () => {
     )
   }
 
+  // 现场疑问：上传图片（转为 base64 存到该提问的 images 中）
+  const handleInquiryImagesChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = e.target.files
+    e.target.value = ''
+    if (!files || files.length === 0) return
+    const inquiry = viewingInquiry || editingInquiry
+    if (!inquiry) return
+    const pending = Array.from(files)
+    const urls: string[] = []
+    const readNext = () => {
+      const file = pending.shift()
+      if (!file) {
+        const merged = [...(inquiry.images || []), ...urls]
+        setInquiries((prev) =>
+          prev.map((item) =>
+            item.id === inquiry.id
+              ? { ...item, images: merged }
+              : item
+          )
+        )
+        setViewingInquiry((prev) =>
+          prev?.id === inquiry.id ? { ...prev, images: merged } : prev
+        )
+        setEditingInquiry((prev) =>
+          prev?.id === inquiry.id ? { ...prev, images: merged } : prev
+        )
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        urls.push(String(reader.result || ''))
+        readNext()
+      }
+      reader.readAsDataURL(file)
+    }
+    readNext()
+  }
+
+  // 现场疑问：删除指定位置的图片
+  const removeInquiryImage = (index: number) => {
+    const inquiry = viewingInquiry || editingInquiry
+    if (!inquiry) return
+    const merged = (inquiry.images || []).filter((_, i) => i !== index)
+    setInquiries((prev) =>
+      prev.map((item) =>
+        item.id === inquiry.id ? { ...item, images: merged } : item
+      )
+    )
+    setViewingInquiry((prev) =>
+      prev?.id === inquiry.id ? { ...prev, images: merged } : prev
+    )
+    setEditingInquiry((prev) =>
+      prev?.id === inquiry.id ? { ...prev, images: merged } : prev
+    )
+  }
+
   const renderInquiryDetailModal = () => {
     const isEditing = !!editingInquiry
     const inquiry = viewingInquiry || editingInquiry
@@ -1759,27 +1818,43 @@ const AdminDashboard: React.FC = () => {
                   <p className='text-xs text-slate-700 leading-relaxed'>
                     {inquiry.question}
                   </p>
-                  {inquiry.images &&
-                    inquiry.images.length > 0 && (
-                      <div className='mt-4 space-y-2'>
-                        <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest'>
-                          现场物证图片
-                        </p>
-                        <div className='grid grid-cols-2 gap-3'>
-                          {inquiry.images.map((img, i) => (
-                            <div
-                              key={i}
-                              className='aspect-square bg-slate-100 rounded-xl overflow-hidden'>
-                              <img
-                                src={img}
-                                className='w-full h-full object-cover'
-                                alt=''
-                              />
-                            </div>
-                          ))}
+                  <div className='mt-4 space-y-2'>
+                    <p className='text-[9px] font-black text-slate-400 uppercase tracking-widest'>
+                      现场物证图片
+                    </p>
+                    <div className='grid grid-cols-3 gap-3'>
+                      {(inquiry.images || []).map((img, i) => (
+                        <div
+                          key={i}
+                          className='relative aspect-square bg-slate-100 rounded-xl overflow-hidden group'>
+                          <img
+                            src={img}
+                            className='w-full h-full object-cover'
+                            alt=''
+                          />
+                          <button
+                            onClick={() => removeInquiryImage(i)}
+                            title='删除图片'
+                            className='absolute top-1.5 right-1.5 p-1.5 bg-black/55 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500'>
+                            <DeleteIcon size={11} />
+                          </button>
                         </div>
-                      </div>
-                    )}
+                      ))}
+                      <label className='aspect-square border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center cursor-pointer text-slate-300 hover:text-blue-500 hover:border-blue-400 transition-all'>
+                        <ImagePlus size={22} />
+                        <span className='text-[9px] font-black mt-1'>
+                          上传图片
+                        </span>
+                        <input
+                          type='file'
+                          accept='image/*'
+                          multiple
+                          className='hidden'
+                          onChange={handleInquiryImagesChange}
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
                 <div className='bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-4'>
                   <h4 className='text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 flex items-center'>
