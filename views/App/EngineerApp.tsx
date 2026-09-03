@@ -1319,10 +1319,8 @@ const EngineerApp: React.FC = () => {
               <div className='absolute bottom-20 left-0 right-0 px-4 pt-10 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent z-40 flex space-x-3'>
                 <button
                   onClick={() => {
-                    if (confirm('确定要结束本次维修流程并提交执行记录吗？')) {
-                      setSubmissionSource('CLOSE')
-                      setStep('FINAL_SUBMIT')
-                    }
+                    setSubmissionSource('CLOSE')
+                    setStep('FINAL_SUBMIT')
                   }}
                   className='flex-1 py-4 bg-white border-2 border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm active:scale-95 transition-all'>
                   CLOSE 结束
