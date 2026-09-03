@@ -49,6 +49,10 @@ import {
   MOCK_MEDIA_RESOURCES
 } from '../../constants'
 import { Device, MaintenanceGuide, GuideStep, RepairRecord } from '../../types'
+import {
+  loadEnabledOptionTexts,
+  subscribeExecutionOptions
+} from '../../components/admin/executionOptionsStore'
 
 const EngineerApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'HOME' | 'MESSAGE' | 'PROFILE'>('HOME')
@@ -74,12 +78,34 @@ const EngineerApp: React.FC = () => {
   )
   const [activeGuideStepIdx, setActiveGuideStepIdx] = useState(0)
   const [showStepJump, setShowStepJump] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
 
   // 维修反馈相关状态
   const [repairActionText, setRepairActionText] = useState('')
   const [repairPhotos, setRepairPhotos] = useState<string[]>([])
   const [isSubmittingRepair, setIsSubmittingRepair] = useState(false)
+
+  // 执行说明下拉选项（与后台「执行说明选项管理」共享，仅展示启用项，实时同步）
+  const [execOptions, setExecOptions] = useState<string[]>(loadEnabledOptionTexts)
+  const repairActionTextRef = useRef(repairActionText)
+  useEffect(() => {
+    repairActionTextRef.current = repairActionText
+  }, [repairActionText])
+
+  useEffect(() => {
+    const syncOptions = () => {
+      const next = loadEnabledOptionTexts()
+      setExecOptions(next)
+      // 若当前所选内容已被后台删除/禁用，则清空选择
+      if (
+        repairActionTextRef.current &&
+        !next.includes(repairActionTextRef.current)
+      ) {
+        setRepairActionText('')
+      }
+    }
+    const unsubscribe = subscribeExecutionOptions(syncOptions)
+    return unsubscribe
+  }, [])
 
   // 排序后的步骤
   const sortedSteps = useMemo(() => {
@@ -1061,58 +1087,14 @@ const EngineerApp: React.FC = () => {
             </div>
           )}
 
-          {/* 帮助内容浮层 */}
-          {showHelp && currentStep && (
-            <div className='absolute inset-0 z-[190] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300'>
-              <div className='w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300'>
-                <div className='p-6 border-b border-slate-100 flex items-center justify-between bg-blue-600 text-white'>
-                  <div className='flex items-center space-x-2'>
-                    <Info size={18} />
-                    <h3 className='text-sm font-black'>专家帮助与技巧</h3>
-                  </div>
-                  <button
-                    onClick={() => setShowHelp(false)}
-                    className='p-2 bg-white/20 rounded-full text-white hover:bg-white/30 transition-colors'>
-                    <X size={16} />
-                  </button>
-                </div>
-                <div className='p-8 space-y-4'>
-                  <div className='p-5 bg-blue-50 rounded-3xl border border-blue-100'>
-                    <p className='text-xs text-blue-800 leading-relaxed font-medium italic'>
-                      "
-                      {currentStep.helpContent ||
-                        '该步骤暂无特定的专家建议，请严格按照操作说明进行。'}
-                      "
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowHelp(false)}
-                    className='w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all'>
-                    明白了
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {currentStep ? (
             <>
               <div className='flex-1 overflow-y-auto space-y-6 scrollbar-hide pb-36'>
                 <div className='bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-5'>
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center space-x-2'>
-                      <span className='bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg'>
-                        步骤 {activeGuideStepIdx + 1}
-                      </span>
-                      <span className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                        {currentStep.stage}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setShowHelp(true)}
-                      className='p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors'>
-                      <Info size={16} />
-                    </button>
+                  <div>
+                    <span className='bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-lg'>
+                      步骤 {activeGuideStepIdx + 1}
+                    </span>
                   </div>
                   <h3 className='text-base font-black text-slate-900 leading-tight'>
                     {currentStep.title}
@@ -1516,21 +1498,13 @@ const EngineerApp: React.FC = () => {
                     <option value='' disabled>
                       请选择本次执行结果...
                     </option>
-                    <option value='已完成维修，设备恢复正常'>
-                      已完成维修，设备恢复正常
-                    </option>
-                    <option value='已更换备件，设备运行正常'>
-                      已更换备件，设备运行正常
-                    </option>
-                    <option value='已完成清洁保养'>
-                      已完成清洁保养
-                    </option>
-                    <option value='已完成校准调试'>
-                      已完成校准调试
-                    </option>
-                    <option value='发现新问题，需进一步排查'>
-                      发现新问题，需进一步排查
-                    </option>
+                    {execOptions
+                      .filter((o) => o.trim())
+                      .map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
                   </select>
                   <ChevronDown
                     size={16}

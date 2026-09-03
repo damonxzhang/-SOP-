@@ -60,7 +60,8 @@ import {
   Camera,
   Calendar,
   Wrench,
-  Volume2
+  Volume2,
+  ListChecks
 } from 'lucide-react'
 import {
   MaintenanceGuide,
@@ -99,6 +100,7 @@ import UserManagement from '../../components/admin/UserManagement'
 import PersonalInfo from '../../components/admin/PersonalInfo'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
 import SOPUsageRecord from '../../components/admin/SOPUsageRecord'
+import ExecutionOptions from '../../components/admin/ExecutionOptions'
 import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from '../../components/admin/pmShared'
 import { isAutoSpeakEnabled, setAutoSpeakEnabled, notifyAutoSpeakChanged } from '../../components/admin/autoSpeak'
 
@@ -587,6 +589,11 @@ const AdminDashboard: React.FC = () => {
       label: 'SOP 库的使用记录'
     },
     {
+      id: '执行说明选项管理',
+      icon: <ListChecks size={18} />,
+      label: '执行说明选项管理'
+    },
+    {
       id: '多媒体资料库',
       icon: <HardDrive size={18} />,
       label: '多媒体资料库'
@@ -956,6 +963,8 @@ const AdminDashboard: React.FC = () => {
         )
       case '预防性维护管理':
         return <PreventiveMaintenance isAdmin={currentUser?.role === Role.ADMIN} />
+      case '执行说明选项管理':
+        return <ExecutionOptions />
       case 'SOP 库的使用记录':
         return (
           <SOPUsageRecord guides={guides} devices={devices} users={users} />
