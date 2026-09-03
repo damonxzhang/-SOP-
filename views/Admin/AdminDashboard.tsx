@@ -498,6 +498,8 @@ const AdminDashboard: React.FC = () => {
   const [editingGuide, setEditingGuide] = useState<MaintenanceGuide | null>(
     null
   )
+  // SOP 编辑器弹窗内：设备机型筛选（联动「关联设备」下拉框）
+  const [guideDeviceModel, setGuideDeviceModel] = useState('')
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [addingUser, setAddingUser] = useState<boolean>(false)
   const [newUser, setNewUser] = useState<Partial<User>>({
@@ -923,6 +925,14 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
+  // 打开 SOP 编辑器时同步设备机型筛选（依据该指南已关联的设备）
+  const handleOpenGuideEditor = (guide: MaintenanceGuide) => {
+    setGuideDeviceModel(
+      devices.find((d) => d.id === guide.deviceId)?.model || ''
+    )
+    setEditingGuide(guide)
+  }
+
   const renderContent = () => {
     switch (activeTab) {
       case '统计看板':
@@ -934,7 +944,7 @@ const AdminDashboard: React.FC = () => {
             devices={devices}
             onSaveGuide={handleSaveGuide}
             onToggleGuideStatus={handleToggleGuideStatus}
-            onEditGuide={setEditingGuide}
+            onEditGuide={handleOpenGuideEditor}
             guideSearch={guideSearch}
             setGuideSearch={setGuideSearch}
             guideDeviceFilter={guideDeviceFilter}
@@ -1995,7 +2005,7 @@ const AdminDashboard: React.FC = () => {
               <div className='grid grid-cols-2 md:grid-cols-4 gap-6'>
                 <div className='space-y-1'>
                   <span className='text-[10px] text-slate-400 font-black uppercase'>
-                    故障码
+                    报警代码
                   </span>
                   <input
                     className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-black text-blue-600'
@@ -2010,6 +2020,39 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div className='space-y-1'>
                   <span className='text-[10px] text-slate-400 font-black uppercase'>
+                    设备机型
+                  </span>
+                  <select
+                    className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'
+                    value={guideDeviceModel}
+                    onChange={(e) => {
+                      const model = e.target.value
+                      setGuideDeviceModel(model)
+                      // 机型变化时，若当前已选设备不属于该机型则清空关联设备
+                      const cur = devices.find(
+                        (d) => d.id === editingGuide.deviceId
+                      )
+                      if (cur && cur.model !== model) {
+                        setEditingGuide({
+                          ...editingGuide,
+                          deviceId: ''
+                        })
+                      }
+                    }}>
+                    <option value=''>全部机型</option>
+                    {[
+                      ...new Set(
+                        devices.map((d) => d.model).filter(Boolean)
+                      )
+                    ].map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className='space-y-1'>
+                  <span className='text-[10px] text-slate-400 font-black uppercase'>
                     关联设备
                   </span>
                   <select
@@ -2021,11 +2064,16 @@ const AdminDashboard: React.FC = () => {
                         deviceId: e.target.value
                       })
                     }>
-                    {devices.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.model} ({d.sn})
-                      </option>
-                    ))}
+                    <option value=''>请选择关联设备</option>
+                    {devices
+                      .filter(
+                        (d) => !guideDeviceModel || d.model === guideDeviceModel
+                      )
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.model} ({d.sn})
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div className='space-y-1'>
@@ -2041,6 +2089,23 @@ const AdminDashboard: React.FC = () => {
                         faultCategory: e.target.value
                       })
                     }
+                  />
+                </div>
+                <div className='space-y-1'>
+                  <span className='text-[10px] text-slate-400 font-black uppercase'>
+                    报警代码描述
+                  </span>
+                  <textarea
+                    rows={2}
+                    className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold resize-none'
+                    value={editingGuide.faultPhenomenon || ''}
+                    onChange={(e) =>
+                      setEditingGuide({
+                        ...editingGuide,
+                        faultPhenomenon: e.target.value
+                      })
+                    }
+                    placeholder='请输入该报警代码对应的描述...'
                   />
                 </div>
                 <div className='space-y-1'>

@@ -503,7 +503,7 @@ const EngineerApp: React.FC = () => {
                     <div className='flex items-center space-x-2 px-1'>
                       <div className='w-1 h-3 bg-blue-600 rounded-full'></div>
                       <h5 className='text-[11px] font-black text-slate-900 uppercase tracking-wider'>
-                        {scope}
+                        故障分类
                       </h5>
                       <span className='text-[9px] font-black text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100'>
                         {alarms.length}
