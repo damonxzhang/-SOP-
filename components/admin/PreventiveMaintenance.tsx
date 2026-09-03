@@ -114,12 +114,45 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
   // 红牌持续弹窗
   const [redPopupDismissed, setRedPopupDismissed] = useState(false)
 
+  // 周期测算启停：默认全部启用；关闭后该「设备+备件」组合不再参与生命周期测算与预警
+  const [disabledCalcKeys, setDisabledCalcKeys] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sop_calc_disabled_keys') || '{}')
+    } catch {
+      return {}
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('sop_calc_disabled_keys', JSON.stringify(disabledCalcKeys))
+    } catch {
+      /* ignore */
+    }
+  }, [disabledCalcKeys])
+
   // ============ 生命周期与预警测算 ============
 
   const alertStatuses = useMemo<PartAlertStatus[]>(() => computeAlertStatuses(records, parts), [records, parts])
 
-  const redAlerts = alertStatuses.filter((a) => a.level === 'red')
-  const yellowAlerts = alertStatuses.filter((a) => a.level === 'yellow')
+  // 过滤已停用测算的组合（预警看板 / 红牌拦截 / 统计不再展示）
+  const visibleAlertStatuses = useMemo(
+    () => alertStatuses.filter((a) => !disabledCalcKeys[a.key]),
+    [alertStatuses, disabledCalcKeys]
+  )
+
+  const redAlerts = visibleAlertStatuses.filter((a) => a.level === 'red')
+  const yellowAlerts = visibleAlertStatuses.filter((a) => a.level === 'yellow')
+
+  // 停用 / 恢复「是否启动计算」
+  const handleToggleCalc = (key: string) => {
+    if (!isEngineer) {
+      setToast('当前角色只读，无法修改测算启停')
+      return
+    }
+    const turningOff = !disabledCalcKeys[key]
+    setDisabledCalcKeys((prev) => ({ ...prev, [key]: turningOff }))
+    setToast(turningOff ? '已停用该组合的周期测算' : '已恢复该组合的周期测算')
+  }
 
   // ============ 语音播报：红牌过期自动提醒 ============
   const redAlertsRef = useRef<PartAlertStatus[]>([])
@@ -400,6 +433,10 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
   // ============ 安全系数修正 ============
 
   const handleSaveFactor = (alert: PartAlertStatus) => {
+    if (disabledCalcKeys[alert.key]) {
+      setToast('该组合已停用测算，请先恢复后再调整安全系数')
+      return
+    }
     const draft = parseFloat(factorDrafts[alert.partId] ?? '')
     if (isNaN(draft) || draft <= 0 || draft > 1.5) {
       setToast('安全系数需在 0~1.5 之间')
@@ -431,6 +468,10 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
   // ============ 初始寿命修正 ============
 
   const handleSaveLifecycle = (alert: PartAlertStatus) => {
+    if (disabledCalcKeys[alert.key]) {
+      setToast('该组合已停用测算，请先恢复后再调整初始寿命')
+      return
+    }
     const draft = parseInt(lifecycleDrafts[alert.partId] ?? '', 10)
     if (isNaN(draft) || draft <= 0) {
       setToast('初始寿命需为正整数')
@@ -500,7 +541,7 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
           <div className='bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-center space-x-4'>
             <div className='p-3 bg-emerald-100 text-emerald-600 rounded-2xl'><CircleCheck size={22} /></div>
             <div>
-              <p className='text-2xl font-black text-slate-900'>{alertStatuses.filter((a) => a.level === 'normal').length}</p>
+              <p className='text-2xl font-black text-slate-900'>{visibleAlertStatuses.filter((a) => a.level === 'normal').length}</p>
               <p className='text-xs font-bold text-slate-400'>正常设备/备件</p>
             </div>
           </div>
@@ -530,7 +571,7 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
         </div>
 
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-          {alertStatuses.map((a) => (
+          {visibleAlertStatuses.map((a) => (
             <div
               key={a.key}
               className={`p-6 rounded-[2rem] border shadow-sm transition-all ${levelStyle(a.level)} ${a.level === 'red' ? 'animate-pulse' : ''}`}>
@@ -581,7 +622,7 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
               )}
             </div>
           ))}
-          {alertStatuses.length === 0 && (
+          {visibleAlertStatuses.length === 0 && (
             <div className='col-span-full py-16 text-center text-slate-400 text-sm'>暂无备件更换记录，请先录入更换记录</div>
           )}
         </div>
@@ -1166,6 +1207,7 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                 {alertStatuses.map((a) => {
                   const currentFactor = parts.find((p) => p.id === a.partId)?.safetyFactor ?? 0.9
                   const stdLifecycle = parts.find((p) => p.id === a.partId)?.standardLifecycleDays
+                  const calcOff = !!disabledCalcKeys[a.key]
                   // 过期时间 = 最近更换日期 + 预警阈值天数
                   const nextDate = new Date(a.lastReplaceDate + 'T00:00:00')
                   nextDate.setDate(nextDate.getDate() + a.thresholdDays)
@@ -1175,9 +1217,14 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                   warnDate.setDate(warnDate.getDate() - 7)
                   const warnDateStr = `${warnDate.getFullYear()}-${String(warnDate.getMonth() + 1).padStart(2, '0')}-${String(warnDate.getDate()).padStart(2, '0')}`
                   return (
-                    <tr key={a.key} className='hover:bg-slate-50/50 transition-colors'>
+                    <tr key={a.key} className={`transition-colors ${calcOff ? 'bg-slate-50 opacity-60 hover:bg-slate-50' : 'hover:bg-slate-50/50'}`}>
                       <td className='px-6 py-4'>
-                        <p className='text-xs font-black text-slate-800'>{a.deviceNo} · {a.partName}</p>
+                        <div className='flex items-center space-x-2'>
+                          <p className='text-xs font-black text-slate-800'>{a.deviceNo} · {a.partName}</p>
+                          {calcOff && (
+                            <span className='px-1.5 py-0.5 bg-slate-200 text-slate-500 rounded text-[9px] font-black whitespace-nowrap'>已停用测算</span>
+                          )}
+                        </div>
                         <p className='text-[10px] text-slate-400 font-bold'>{a.model} / {a.installPosition}</p>
                       </td>
                       <td className='px-4 py-4 text-xs font-bold text-slate-600'>{a.recordsCount} 次</td>
@@ -1189,13 +1236,15 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                               min='1'
                               placeholder={String(stdLifecycle ?? '')}
                               value={lifecycleDrafts[a.partId] ?? ''}
+                              disabled={calcOff}
                               onChange={(e) => setLifecycleDrafts((prev) => ({ ...prev, [a.partId]: e.target.value }))}
-                              className='w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
+                              className='w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed'
                             />
                             <span className='text-[10px] text-slate-400'>天</span>
                             <button
                               onClick={() => handleSaveLifecycle(a)}
-                              className='px-2 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all active:scale-95'>
+                              disabled={calcOff}
+                              className='px-2 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed'>
                               保存
                             </button>
                           </div>
@@ -1216,22 +1265,35 @@ const PreventiveMaintenance: React.FC<PreventiveMaintenanceProps> = ({
                       <td className='px-4 py-4 text-xs font-bold text-slate-600'>{warnDateStr}</td>
                       <td className='px-6 py-4 text-right'>
                         {isEngineer ? (
-                          <div className='flex items-center justify-end space-x-2'>
-                            <input
-                              type='number'
-                              step='0.05'
-                              min='0'
-                              max='1.5'
-                              placeholder={String(currentFactor)}
-                              value={factorDrafts[a.partId] ?? ''}
-                              onChange={(e) => setFactorDrafts((prev) => ({ ...prev, [a.partId]: e.target.value }))}
-                              className='w-20 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
-                            />
+                          <div className='flex flex-col items-end gap-2'>
                             <button
-                              onClick={() => handleSaveFactor(a)}
-                              className='px-3 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all active:scale-95'>
-                              保存
+                              onClick={() => handleToggleCalc(a.key)}
+                              title={calcOff ? '已停用测算，点击恢复' : '点击停用该组合的周期测算'}
+                              className={`inline-flex items-center space-x-1.5 text-[10px] font-black transition-all active:scale-95 ${calcOff ? 'text-slate-400' : 'text-blue-600'}`}>
+                              <span className={`relative inline-flex w-8 h-[18px] rounded-full transition-colors shrink-0 ${calcOff ? 'bg-slate-300' : 'bg-blue-600'}`}>
+                                <span className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all ${calcOff ? 'left-[2px]' : 'left-[16px]'}`} />
+                              </span>
+                              <span>{calcOff ? '已停用计算' : '启动计算'}</span>
                             </button>
+                            <div className='flex items-center justify-end space-x-2'>
+                              <input
+                                type='number'
+                                step='0.05'
+                                min='0'
+                                max='1.5'
+                                placeholder={String(currentFactor)}
+                                value={factorDrafts[a.partId] ?? ''}
+                                disabled={calcOff}
+                                onChange={(e) => setFactorDrafts((prev) => ({ ...prev, [a.partId]: e.target.value }))}
+                                className='w-20 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed'
+                              />
+                              <button
+                                onClick={() => handleSaveFactor(a)}
+                                disabled={calcOff}
+                                className='px-3 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed'>
+                                保存
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <span className='text-[10px] font-bold text-slate-300'>只读</span>

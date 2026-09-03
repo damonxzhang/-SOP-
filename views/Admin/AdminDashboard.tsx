@@ -101,6 +101,7 @@ import PersonalInfo from '../../components/admin/PersonalInfo'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
 import SOPUsageRecord from '../../components/admin/SOPUsageRecord'
 import ExecutionOptions from '../../components/admin/ExecutionOptions'
+import FaultCategoryManager from '../../components/admin/FaultCategoryManager'
 import { MOCK_PARTS, MOCK_RECORDS, computeAlertStatuses } from '../../components/admin/pmShared'
 import { isAutoSpeakEnabled, setAutoSpeakEnabled, notifyAutoSpeakChanged } from '../../components/admin/autoSpeak'
 
@@ -591,6 +592,11 @@ const AdminDashboard: React.FC = () => {
       label: 'SOP 库的使用记录'
     },
     {
+      id: '故障分类管理',
+      icon: <Tag size={18} />,
+      label: '故障分类管理'
+    },
+    {
       id: '执行说明选项管理',
       icon: <ListChecks size={18} />,
       label: '执行说明选项管理'
@@ -973,6 +979,8 @@ const AdminDashboard: React.FC = () => {
         )
       case '预防性维护管理':
         return <PreventiveMaintenance isAdmin={currentUser?.role === Role.ADMIN} />
+      case '故障分类管理':
+        return <FaultCategoryManager />
       case '执行说明选项管理':
         return <ExecutionOptions />
       case 'SOP 库的使用记录':
@@ -2080,16 +2088,22 @@ const AdminDashboard: React.FC = () => {
                   <span className='text-[10px] text-slate-400 font-black uppercase'>
                     故障分类
                   </span>
-                  <input
-                    className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold'
+                  <select
+                    className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'
                     value={editingGuide.faultCategory}
                     onChange={(e) =>
                       setEditingGuide({
                         ...editingGuide,
                         faultCategory: e.target.value
                       })
-                    }
-                  />
+                    }>
+                    <option value=''>请选择故障分类</option>
+                    {uniqueCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className='space-y-1'>
                   <span className='text-[10px] text-slate-400 font-black uppercase'>
@@ -2110,7 +2124,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div className='space-y-1'>
                   <span className='text-[10px] text-slate-400 font-black uppercase'>
-                    报修类型
+                    问题类型
                   </span>
                   <select className='w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none text-xs font-bold appearance-none'>
                     <option value='normal'>普通报修</option>
