@@ -128,6 +128,9 @@ export const MOCK_USER: User = {
   name: '陈工程师',
   role: Role.SENIOR_ENGINEER,
   employeeId: 'TECH-088',
+  pid: 'PID-88001',
+  email: 'chen.gc@nxp.local',
+  position: '资深设备工程师',
   department: '光学系统部',
   status: 'active',
   lastLogin: '2025-05-15 09:30',
@@ -138,9 +141,9 @@ export const MOCK_USER: User = {
 
 export const ALL_USERS: User[] = [
   MOCK_USER,
-  { id: 'u2', name: '王小明', role: Role.JUNIOR_ENGINEER, employeeId: 'TECH-102', department: '制造二部', status: 'active', lastLogin: '2025-05-14 14:20', avatar: 'https://i.pravatar.cc/150?u=u2', assignedDeviceIds: ['d3'], permissions: JUNIOR_PERMISSIONS },
-  { id: 'u3', name: '李经理', role: Role.ADMIN, employeeId: 'ADM-001', department: '运维管理处', status: 'active', lastLogin: '2025-05-15 08:00', avatar: 'https://i.pravatar.cc/150?u=u3', assignedDeviceIds: ['d1', 'd2', 'd3', 'd4'], permissions: ADMIN_PERMISSIONS },
-  { id: 'u4', name: '张工(外协)', role: Role.OUTSOURCED_ENGINEER, employeeId: 'EXT-552', department: '第三方维保', status: 'active', lastLogin: '2025-05-10 11:00', avatar: 'https://i.pravatar.cc/150?u=u4', assignedDeviceIds: ['d4'], permissions: OUTSOURCED_PERMISSIONS },
+  { id: 'u2', name: '王小明', role: Role.JUNIOR_ENGINEER, employeeId: 'TECH-102', pid: 'PID-10201', email: 'wang.xm@nxp.local', position: '设备工程师', department: '制造二部', status: 'active', lastLogin: '2025-05-14 14:20', avatar: 'https://i.pravatar.cc/150?u=u2', assignedDeviceIds: ['d3'], permissions: JUNIOR_PERMISSIONS },
+  { id: 'u3', name: '李经理', role: Role.ADMIN, employeeId: 'ADM-001', pid: 'PID-00011', email: 'li.mg@nxp.local', position: '运维管理处经理', department: '运维管理处', status: 'active', lastLogin: '2025-05-15 08:00', avatar: 'https://i.pravatar.cc/150?u=u3', assignedDeviceIds: ['d1', 'd2', 'd3', 'd4'], permissions: ADMIN_PERMISSIONS },
+  { id: 'u4', name: '张工(外协)', role: Role.OUTSOURCED_ENGINEER, employeeId: 'EXT-552', pid: 'PID-55201', email: 'zhang.wx@nxp.local', position: '外协技术员', department: '第三方维保', status: 'active', lastLogin: '2025-05-10 11:00', avatar: 'https://i.pravatar.cc/150?u=u4', assignedDeviceIds: ['d4'], permissions: OUTSOURCED_PERMISSIONS },
 ];
 
 export const MOCK_GUIDES: MaintenanceGuide[] = [

@@ -26,6 +26,9 @@ export interface User {
   employeeId: string;
   username: string;
   department?: string;
+  pid?: string; // PID
+  email?: string; // 邮箱
+  position?: string; // 职务
   status: UserStatus;
   lastLogin?: string;
   avatar?: string;

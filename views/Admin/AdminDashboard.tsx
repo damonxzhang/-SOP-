@@ -5,7 +5,7 @@ import {
   MessageSquare,
   HardDrive,
   Users,
-  User as UserIcon,
+  ContactRound,
   FileImage,
   FileVideo,
   FileText,
@@ -44,7 +44,6 @@ import {
   Shield,
   Cpu,
   Settings,
-  UserPlus,
   UserMinus,
   UserCheck,
   Lock,
@@ -74,7 +73,7 @@ import {
   MediaResource,
   Device
 } from '../../types'
-import { REPAIR_OPTIONS_BY_MODEL, DEFAULT_REPAIR_OPTIONS } from '../../constants'
+import { ALL_USERS, REPAIR_OPTIONS_BY_MODEL, DEFAULT_REPAIR_OPTIONS } from '../../constants'
 import {
   BarChart,
   Bar,
@@ -97,7 +96,7 @@ import SOPLibrary from '../../components/admin/SOPLibrary'
 import InquiryList from '../../components/admin/InquiryList'
 import MediaLibrary from '../../components/admin/MediaLibrary'
 import UserManagement from '../../components/admin/UserManagement'
-import PersonalInfo from '../../components/admin/PersonalInfo'
+import PersonnelManagement from '../../components/admin/PersonnelManagement'
 import PreventiveMaintenance from '../../components/admin/PreventiveMaintenance'
 import SOPUsageRecord from '../../components/admin/SOPUsageRecord'
 import ExecutionOptions from '../../components/admin/ExecutionOptions'
@@ -338,32 +337,46 @@ const AdminDashboard: React.FC = () => {
           const page = overridePagination?.page ?? currentPagination.users.page
           const limit =
             overridePagination?.limit ?? currentPagination.users.limit
-          const res = await fetch('/backend/users/list', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ page, limit })
-          }).then((r) => r.json())
+          let loaded = false
+          try {
+            const res = await fetch('/backend/users/list', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ page, limit })
+            }).then((r) => r.json())
 
-          if (res.code === 200 && res.data?.list) {
-            const mappedUsers = res.data.list.map((u: any) => ({
-              ...u,
-              role:
-                u.role === 'ADMIN'
-                  ? Role.ADMIN
-                  : u.role === 'SENIOR_ENGINEER'
-                    ? Role.SENIOR_ENGINEER
-                    : u.role === 'OUTSOURCED_ENGINEER'
-                      ? Role.OUTSOURCED_ENGINEER
-                      : Role.JUNIOR_ENGINEER
-            }))
-            setUsers(mappedUsers)
+            if (res.code === 200 && res.data?.list) {
+              const mappedUsers = res.data.list.map((u: any) => ({
+                ...u,
+                role:
+                  u.role === 'ADMIN'
+                    ? Role.ADMIN
+                    : u.role === 'SENIOR_ENGINEER'
+                      ? Role.SENIOR_ENGINEER
+                      : u.role === 'OUTSOURCED_ENGINEER'
+                        ? Role.OUTSOURCED_ENGINEER
+                        : Role.JUNIOR_ENGINEER
+              }))
+              setUsers(mappedUsers)
+              setPagination((prev) => ({
+                ...prev,
+                users: {
+                  page: res.data.pagination?.page || page,
+                  limit: res.data.pagination?.limit || limit,
+                  total: res.data.pagination?.total || 0
+                }
+              }))
+              loaded = true
+            }
+          } catch (error) {
+            console.error('Failed to fetch users:', error)
+          }
+          // 后端接口未准备好时，回退到本地演示数据，保证列表页可正常展示
+          if (!loaded) {
+            setUsers(ALL_USERS)
             setPagination((prev) => ({
               ...prev,
-              users: {
-                page: res.data.pagination?.page || page,
-                limit: res.data.pagination?.limit || limit,
-                total: res.data.pagination?.total || 0
-              }
+              users: { page: 1, limit, total: ALL_USERS.length }
             }))
           }
           break
@@ -482,7 +495,7 @@ const AdminDashboard: React.FC = () => {
       现场提问记录: 'inquiries',
       多媒体资料库: 'media',
       用户权限管理: 'users',
-      个人信息: 'currentUser'
+      人员管理: 'users'
     }
     const module = moduleMap[activeTab] || 'currentUser'
     fetchModuleData(module)
@@ -502,16 +515,6 @@ const AdminDashboard: React.FC = () => {
   // SOP 编辑器弹窗内：设备机型筛选（联动「关联设备」下拉框）
   const [guideDeviceModel, setGuideDeviceModel] = useState('')
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [addingUser, setAddingUser] = useState<boolean>(false)
-  const [newUser, setNewUser] = useState<Partial<User>>({
-    name: '',
-    employeeId: '',
-    username: '',
-    role: Role.JUNIOR_ENGINEER,
-    status: 'active',
-    department: '',
-    avatar: ''
-  })
   const [viewingInquiry, setViewingInquiry] = useState<StepInquiry | null>(null)
   const [editingInquiry, setEditingInquiry] = useState<StepInquiry | null>(null)
   const [editAnswer, setEditAnswer] = useState('')
@@ -607,7 +610,7 @@ const AdminDashboard: React.FC = () => {
       label: '多媒体资料库'
     },
     { id: '用户权限管理', icon: <Users size={18} />, label: '用户权限管理' },
-    { id: '个人信息', icon: <UserIcon size={18} />, label: '个人信息' }
+    { id: '人员管理', icon: <ContactRound size={18} />, label: '人员管理' }
   ]
 
   const handleSaveGuide = (data: MaintenanceGuide) => {
@@ -622,67 +625,6 @@ const AdminDashboard: React.FC = () => {
   const handleSaveUser = (data: User) => {
     setUsers((prev) => prev.map((u) => (u.id === data.id ? data : u)))
     setEditingUser(null)
-  }
-
-  const handleAddUser = async (userData: Partial<User>) => {
-    try {
-      const response = await fetch('/backend/users/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      })
-
-      const result = await response.json()
-      if (result.code === 200) {
-        const newUser = result.data
-        setUsers((prev) => [newUser, ...prev])
-        setAddingUser(false)
-        setNewUser({
-          name: '',
-          employeeId: '',
-          username: '',
-          role: Role.JUNIOR_ENGINEER,
-          status: 'active',
-          department: '',
-          avatar: ''
-        })
-      } else {
-        alert('添加用户失败: ' + result.message)
-      }
-    } catch (error) {
-      console.error('Failed to add user:', error)
-      // 后端接口未准备好时，依然在前端模拟添加，方便调试演示
-      const mockNewUser: User = {
-        id: `u${Date.now()}`,
-        name: userData.name || '',
-        employeeId: userData.employeeId || '',
-        username: userData.username || '',
-        role: userData.role || Role.JUNIOR_ENGINEER,
-        status: userData.status || 'active',
-        department: userData.department || '',
-        avatar: userData.avatar || '',
-        lastLogin: null,
-        assignedDeviceIds: [],
-        permissions: {
-          dashboard: 'view',
-          sopLibrary: 'view',
-          userManagement: 'none',
-          records: 'view',
-          notifications: 'view'
-        }
-      }
-      setUsers((prev) => [mockNewUser, ...prev])
-      setAddingUser(false)
-      setNewUser({
-        name: '',
-        employeeId: '',
-        username: '',
-        role: Role.JUNIOR_ENGINEER,
-        status: 'active',
-        department: '',
-        avatar: ''
-      })
-    }
   }
 
   const handleDeleteUser = async (userId: string) => {
@@ -708,196 +650,6 @@ const AdminDashboard: React.FC = () => {
       // 后端接口未准备好时，依然在前端模拟删除，方便调试演示
       setUsers((prev) => prev.filter((u) => u.id !== userId))
     }
-  }
-
-  const renderAddUserModal = () => {
-    if (!addingUser) return null
-
-    return (
-      <div className='fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-lg animate-in fade-in'>
-        <div className='bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20'>
-          <div className='px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white'>
-            <div className='flex items-center space-x-5'>
-              <div className='w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner rotate-3'>
-                <UserPlus size={28} />
-              </div>
-              <div>
-                <h3 className='text-xl font-black text-slate-900'>
-                  邀请新工程师
-                </h3>
-                <p className='text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1'>
-                  创建新用户账户
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setAddingUser(false)}
-              className='p-3 hover:bg-slate-100 rounded-2xl transition-all'>
-              <DeleteIcon size={24} />
-            </button>
-          </div>
-
-          <div className='p-10 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar'>
-            <div className='space-y-6'>
-              <div className='space-y-2'>
-                <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                  姓名
-                </label>
-                <input
-                  type='text'
-                  className='w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner'
-                  value={newUser.name || ''}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, name: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                  工号
-                </label>
-                <input
-                  type='text'
-                  className='w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner'
-                  value={newUser.employeeId || ''}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, employeeId: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                  用户名
-                </label>
-                <input
-                  type='text'
-                  className='w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner'
-                  value={newUser.username || ''}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, username: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className='grid grid-cols-2 gap-6'>
-                <div className='space-y-2'>
-                  <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                    部门
-                  </label>
-                  <select
-                    className='w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner'
-                    value={newUser.department || ''}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, department: e.target.value })
-                    }>
-                    <option value=''>请选择部门</option>
-                    {DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className='space-y-2'>
-                  <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                    角色
-                  </label>
-                  <select
-                    className='w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner'
-                    value={newUser.role || Role.JUNIOR_ENGINEER}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, role: e.target.value as Role })
-                    }>
-                    <option value={Role.ADMIN}>ADMIN</option>
-                    <option value={Role.SENIOR_ENGINEER}>
-                      SENIOR_ENGINEER
-                    </option>
-                    <option value={Role.JUNIOR_ENGINEER}>
-                      JUNIOR_ENGINEER
-                    </option>
-                    <option value={Role.OUTSOURCED_ENGINEER}>
-                      OUTSOURCED_ENGINEER
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <div className='space-y-2'>
-                <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                  状态
-                </label>
-                <div className='flex space-x-4'>
-                  <label className='flex items-center space-x-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='newUserStatus'
-                      value='active'
-                      checked={newUser.status === 'active'}
-                      onChange={() =>
-                        setNewUser({ ...newUser, status: 'active' })
-                      }
-                      className='w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded'
-                    />
-                    <span className='text-sm font-black text-slate-700'>
-                      正常
-                    </span>
-                  </label>
-                  <label className='flex items-center space-x-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='newUserStatus'
-                      value='disabled'
-                      checked={newUser.status === 'disabled'}
-                      onChange={() =>
-                        setNewUser({ ...newUser, status: 'disabled' })
-                      }
-                      className='w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded'
-                    />
-                    <span className='text-sm font-black text-slate-700'>
-                      已冻结
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div className='space-y-2'>
-                <label className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>
-                  头像 URL
-                </label>
-                <input
-                  type='text'
-                  className='w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner'
-                  value={newUser.avatar || ''}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, avatar: e.target.value })
-                  }
-                  placeholder='输入头像图片 URL'
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className='px-10 py-8 border-t border-slate-100 flex items-center justify-end bg-slate-50/50'>
-            <button
-              onClick={() => setAddingUser(false)}
-              className='px-8 py-3 text-slate-500 font-black text-sm hover:text-slate-800 transition-colors mr-4'>
-              取消
-            </button>
-            <button
-              onClick={() => handleAddUser(newUser)}
-              disabled={
-                !newUser.name || !newUser.employeeId || !newUser.username
-              }
-              className={`px-12 py-3.5 rounded-2xl font-black text-sm shadow-xl transition-all active:scale-95 flex items-center ${newUser.name && newUser.employeeId && newUser.username ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-              <Save size={18} className='mr-2' /> 创建用户
-            </button>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   const handleToggleGuideStatus = async (guideId: string) => {
@@ -1017,14 +769,20 @@ const AdminDashboard: React.FC = () => {
             users={users}
             isLoadingUsers={isLoadingUsers}
             onEditUser={setEditingUser}
-            onAddUser={() => setAddingUser(true)}
             onDeleteUser={handleDeleteUser}
             pagination={pagination.users}
             onPageChange={(page) => handlePageChange('users', page)}
           />
         )
-      case '个人信息':
-        return <PersonalInfo currentUser={currentUser} inquiries={inquiries} />
+      case '人员管理':
+        return (
+          <PersonnelManagement
+            users={users}
+            isLoadingUsers={isLoadingUsers}
+            pagination={pagination.users}
+            onPageChange={(page) => handlePageChange('users', page)}
+          />
+        )
       default:
         return <Dashboard inquiries={inquiries} />
     }
@@ -2973,7 +2731,6 @@ const AdminDashboard: React.FC = () => {
       {renderInquiryDetailModal()}
       {renderSOPEditorModal()}
       {renderUserEditModal()}
-      {renderAddUserModal()}
     </div>
   )
 }

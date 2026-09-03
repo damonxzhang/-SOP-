@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   Users,
-  UserPlus,
   Search,
   RefreshCcw,
   Settings,
@@ -15,7 +14,6 @@ interface UserManagementProps {
   users: User[]
   isLoadingUsers: boolean
   onEditUser: (user: User) => void
-  onAddUser: () => void
   onDeleteUser: (userId: string) => void
   pagination: {
     page: number
@@ -29,7 +27,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
   users,
   isLoadingUsers,
   onEditUser,
-  onAddUser,
   onDeleteUser,
   pagination,
   onPageChange
@@ -50,11 +47,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
             </p>
           </div>
         </div>
-        <button
-          onClick={onAddUser}
-          className='px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-sm flex items-center shadow-2xl hover:bg-indigo-600 transition-all active:scale-95'>
-          <UserPlus size={20} className='mr-2' /> 邀请新工程师
-        </button>
       </div>
 
       <div className='bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden'>
